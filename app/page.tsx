@@ -1,29 +1,30 @@
 "use client";
 
-import React from "react";
-
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   MaterialsTable,
   type MaterialItem,
 } from "@/components/materials-table";
-import { SignaturePad } from "@/components/signature-pad";
 import {
   FileText,
-  User,
-  Users,
+  Truck,
   Calendar,
   Clock,
-  Hash,
   Send,
   RotateCcw,
   CheckCircle2,
   Building2,
-  Truck,
+  User,
+  MapPin,
+  Phone,
+  CreditCard,
+  UserCheck,
 } from "lucide-react";
 
 export default function MaterialPassPage() {
@@ -34,48 +35,49 @@ export default function MaterialPassPage() {
       hour: "2-digit",
       minute: "2-digit",
     }),
-    concepto: "",
-    emisor: "",
-    receptor: "",
+    
+    // Concept Options
+    conceptoOpcion: "PRESTAMO",
+    
+    // Shipping / General Info
+    tiempoEstimado: "",
+    embargueseA: "",
+    ordenCompra: "",
+    direccion: "",
+    telefono: "",
+    tipoPago: "CONTADO", // Contado or Credito
+    
+    // Driver Info
+    conductor: "",
+    fichaConductor: "",
+    vehiculoFMO: "",
+    vehiculoParticular: "",
+    
+    // Dispatch Info
+    despachadoPor: "",
+    fichaDespachador: "",
+    cargoDespachador: "",
+    departamentoDespachador: "",
+    
+    // Observations / Request
     observaciones: "",
+    dirigidoA: "",
+    solicitud: "", // Example: LEIDA AYALA F-12197 /CPU FMO-1195848
   });
 
-  const [items, setItems] = useState<MaterialItem[]>([
-    {
-      id: "1",
-      cantidad: "2",
-      unidad: "Und",
-      descripcion: "Laptop HP ProBook 450 G8 - S/N: 5CD1234ABC",
-    },
-    {
-      id: "2",
-      cantidad: "1",
-      unidad: "Und",
-      descripcion: 'Monitor Dell P2419H 24" - S/N: CN-0P2419H-FCC00',
-    },
-    {
-      id: "3",
-      cantidad: "3",
-      unidad: "Pza",
-      descripcion: "Cable HDMI 2.0 - 1.8m",
-    },
-  ]);
-
-  const [signature, setSignature] = useState<string | null>(null);
+  const [items, setItems] = useState<MaterialItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
     // Simulate submission
     await new Promise((resolve) => setTimeout(resolve, 1500));
-
     setIsSubmitting(false);
     setIsSubmitted(true);
   };
@@ -88,13 +90,26 @@ export default function MaterialPassPage() {
         hour: "2-digit",
         minute: "2-digit",
       }),
-      concepto: "",
-      emisor: "",
-      receptor: "",
+      conceptoOpcion: "PRESTAMO",
+      tiempoEstimado: "",
+      embargueseA: "",
+      ordenCompra: "",
+      direccion: "",
+      telefono: "",
+      tipoPago: "CONTADO",
+      conductor: "",
+      fichaConductor: "",
+      vehiculoFMO: "",
+      vehiculoParticular: "",
+      despachadoPor: "",
+      fichaDespachador: "",
+      cargoDespachador: "",
+      departamentoDespachador: "",
       observaciones: "",
+      dirigidoA: "",
+      solicitud: "",
     });
     setItems([]);
-    setSignature(null);
     setIsSubmitted(false);
   };
 
@@ -124,9 +139,9 @@ export default function MaterialPassPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-10">
       {/* Header */}
-      <header className="bg-primary text-primary-foreground sticky top-0 z-50 shadow-lg animate-slideInDown">
+      <header className="bg-primary text-primary-foreground sticky top-0 z-50 shadow-lg mb-8">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -135,10 +150,10 @@ export default function MaterialPassPage() {
               </div>
               <div>
                 <h1 className="text-lg font-bold tracking-tight">
-                  SoporteFerrominerito
+                  PASE PARA MATERIALES Y MISCELÁNEOS
                 </h1>
                 <p className="text-xs text-primary-foreground/70">
-                  Sistema de Gestión de Pases
+                  Sistema de Gestión de Pases FMO
                 </p>
               </div>
             </div>
@@ -154,135 +169,287 @@ export default function MaterialPassPage() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-5xl mx-auto px-4 py-6">
+      <main className="max-w-5xl mx-auto px-4 space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Document Header Card */}
-          <Card className="border-t-4 border-t-primary animate-slideInUp">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 mb-6">
+          
+          {/* Concept Options */}
+          <Card>
+            <CardHeader className="pb-3 border-b">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
                 <FileText className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold text-foreground">
-                  Pase de Materiales
-                </h2>
-                <span className="ml-auto px-3 py-1 bg-primary/10 text-primary text-sm font-mono rounded-md flex items-center gap-1">
-                  <Hash className="h-3 w-3" />
-                  {formData.folio}
-                </span>
+                Concepto del Pase
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+               <RadioGroup 
+                  value={formData.conceptoOpcion} 
+                  onValueChange={(val) => handleInputChange("conceptoOpcion", val)}
+                  className="grid grid-cols-2 md:grid-cols-4 gap-4"
+                >
+                  {["DONACION", "DEVOLUCION", "PRESTAMO", "REPARACION", "REVISION", "VENDIDO", "FORANEO"].map((opcion) => (
+                    <label 
+                      key={opcion} 
+                      htmlFor={opcion}
+                      className="flex items-center space-x-2 border-2 border-slate-600 rounded-lg p-3 hover:bg-muted/50 cursor-pointer"
+                    >
+                      <RadioGroupItem 
+                        value={opcion} 
+                        id={opcion} 
+                        className="border-slate-600 text-primary w-5 h-5 transition-none duration-0" 
+                      />
+                      <span className="font-medium text-base text-foreground">{opcion}</span>
+                    </label>
+                  ))}
+               </RadioGroup>
+               <div className="mt-4 pt-4 border-t border-slate-300">
+                  <Label>Tiempo Estimado de Regreso a la Empresa</Label>
+                  <Input 
+                    className="mt-2 border-slate-600"
+                    placeholder="Ej. 3 días, 1 semana, Indefinido..." 
+                    value={formData.tiempoEstimado}
+                    onChange={(e) => handleInputChange("tiempoEstimado", e.target.value)}
+                  />
+               </div>
+            </CardContent>
+          </Card>
+
+          {/* Shipping Info */}
+          <Card className="border-slate-300">
+            <CardHeader className="pb-3 border-b border-slate-300">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-primary" />
+                Datos de Envío y Destino
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="space-y-2 md:col-span-2">
+                  <Label>Embárguese a (Nombre / Empresa)</Label>
+                  <Input 
+                    className="border-slate-400"
+                    value={formData.embargueseA}
+                    onChange={(e) => handleInputChange("embargueseA", e.target.value)}
+                  />
+               </div>
+               <div className="space-y-2">
+                  <Label>N° Orden de Compra</Label>
+                  <Input 
+                    className="border-slate-400"
+                    value={formData.ordenCompra}
+                    onChange={(e) => handleInputChange("ordenCompra", e.target.value)}
+                  />
+               </div>
+               <div className="space-y-2">
+                  <Label>Teléfono</Label>
+                  <Input 
+                     type="tel"
+                     className="border-slate-400"
+                    value={formData.telefono}
+                    onChange={(e) => handleInputChange("telefono", e.target.value)}
+                  />
+               </div>
+               <div className="space-y-2 md:col-span-2">
+                  <Label>Dirección</Label>
+                  <Input 
+                    className="border-slate-400"
+                    value={formData.direccion}
+                    onChange={(e) => handleInputChange("direccion", e.target.value)}
+                  />
+               </div>
+               <div className="md:col-span-2 pt-2">
+                  <Label className="block mb-2">Condición de Pago</Label>
+                  <RadioGroup 
+                    value={formData.tipoPago} 
+                    onValueChange={(val) => handleInputChange("tipoPago", val)}
+                    className="flex gap-6"
+                  >
+                    <label 
+                      className="flex items-center space-x-2 cursor-pointer"
+                      htmlFor="contado"
+                    >
+                      <RadioGroupItem value="CONTADO" id="contado" className="border-slate-500 w-5 h-5 transition-none duration-0"/>
+                      <span className="text-base font-medium">Contado</span>
+                    </label>
+                    <label 
+                      className="flex items-center space-x-2 cursor-pointer"
+                      htmlFor="credito"
+                    >
+                      <RadioGroupItem value="CREDITO" id="credito" className="border-slate-500 w-5 h-5 transition-none duration-0"/>
+                      <span className="text-base font-medium">Crédito</span>
+                    </label>
+                  </RadioGroup>
+               </div>
+            </CardContent>
+          </Card>
+
+          {/* Driver & Vehicle */}
+          <Card className="border-slate-300">
+            <CardHeader className="pb-3 border-b border-slate-300">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <Truck className="h-5 w-5 text-primary" />
+                Conductor y Vehículo
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nombre del Conductor</Label>
+                <Input 
+                  className="border-slate-400"
+                  value={formData.conductor}
+                  onChange={(e) => handleInputChange("conductor", e.target.value)}
+                />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Concepto */}
-                <div className="md:col-span-3 space-y-2">
-                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    Concepto
-                  </label>
-                  <Input
-                    placeholder="Ej: Traslado de equipos para mantenimiento preventivo"
-                    value={formData.concepto}
-                    onChange={(e) =>
-                      handleInputChange("concepto", e.target.value)
-                    }
-                    className="h-11"
-                    required
+              <div className="space-y-2">
+                <Label>Ficha o C.I.</Label>
+                <Input 
+                  className="border-slate-400"
+                  value={formData.fichaConductor}
+                  onChange={(e) => handleInputChange("fichaConductor", e.target.value)}
+                />
+              </div>
+              <div className="md:col-span-2 pt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Vehículo F.M.O</Label>
+                  <Input 
+                    className="border-slate-400"
+                    placeholder="Serial del vehículo"
+                    value={formData.vehiculoFMO as string}
+                    onChange={(e) => handleInputChange("vehiculoFMO", e.target.value)}
                   />
                 </div>
-
-                {/* Emisor */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    Emisor (Origen)
-                  </label>
-                  <Input
-                    placeholder="Departamento / Área"
-                    value={formData.emisor}
-                    onChange={(e) =>
-                      handleInputChange("emisor", e.target.value)
-                    }
-                    className="h-11"
-                    required
-                  />
-                </div>
-
-                {/* Receptor */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    Receptor (Destino)
-                  </label>
-                  <Input
-                    placeholder="Departamento / Área"
-                    value={formData.receptor}
-                    onChange={(e) =>
-                      handleInputChange("receptor", e.target.value)
-                    }
-                    className="h-11"
-                    required
-                  />
-                </div>
-
-                {/* Responsable */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    Responsable
-                  </label>
-                  <Input
-                    placeholder="Nombre del responsable"
-                    className="h-11"
+                  <Label>Vehículo Particular</Label>
+                  <Input 
+                    className="border-slate-400"
+                    placeholder="Marca y Modelo"
+                    value={formData.vehiculoParticular as string}
+                    onChange={(e) => handleInputChange("vehiculoParticular", e.target.value)}
                   />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Materials Table Card */}
-          <Card
-            className="animate-slideInUp"
-            style={{ animationDelay: "0.1s", animationFillMode: "both" }}
-          >
+           {/* Dispatch Info */}
+           <Card className="border-slate-300">
+            <CardHeader className="pb-3 border-b border-slate-300">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                Material Despachado Por
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2 md:col-span-2">
+                <Label>Nombre</Label>
+                <Input 
+                  className="border-slate-400"
+                  value={formData.despachadoPor}
+                  onChange={(e) => handleInputChange("despachadoPor", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Ficha</Label>
+                <Input 
+                  className="border-slate-400"
+                  value={formData.fichaDespachador}
+                  onChange={(e) => handleInputChange("fichaDespachador", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Cargo</Label>
+                <Input 
+                  className="border-slate-400"
+                  value={formData.cargoDespachador}
+                  onChange={(e) => handleInputChange("cargoDespachador", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Departamento</Label>
+                <Input 
+                  className="border-slate-400"
+                  value={formData.departamentoDespachador}
+                  onChange={(e) => handleInputChange("departamentoDespachador", e.target.value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Observations & Others */}
+          <Card className="border-slate-300">
+            <CardHeader className="pb-3 border-b border-slate-300">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                Detalles Adicionales
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
+               <div className="space-y-2">
+                <Label>Observaciones</Label>
+                <Textarea 
+                  className="min-h-[100px] border-slate-400"
+                  value={formData.observaciones}
+                  onChange={(e) => handleInputChange("observaciones", e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Dirigido a</Label>
+                  <Input 
+                    className="border-slate-400"
+                    value={formData.dirigidoA}
+                    onChange={(e) => handleInputChange("dirigidoA", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Solicitud (Ej: Nombre / Ficha / Dpto)</Label>
+                  <Input 
+                    className="border-slate-400"
+                     placeholder="Ej: LEIDA AYALA F-12197 /CPU"
+                    value={formData.solicitud}
+                    onChange={(e) => handleInputChange("solicitud", e.target.value)}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+           {/* Authorization - Static */}
+           <Card className="bg-muted/30">
+            <CardHeader className="pb-3 border-b">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-primary" />
+                Autorización
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+               <div className="space-y-1">
+                 <Label className="text-xs text-muted-foreground uppercase">Autorizado Por</Label>
+                 <div className="font-medium text-lg">Carmen Marquez</div>
+               </div>
+               <div className="space-y-1">
+                 <Label className="text-xs text-muted-foreground uppercase">Cargo</Label>
+                 <div className="font-medium">Gerente de Telemática (e)</div>
+               </div>
+               <div className="space-y-1">
+                 <Label className="text-xs text-muted-foreground uppercase">Ficha</Label>
+                 <div className="font-medium">15508</div>
+               </div>
+               <div className="md:col-span-3 pt-6 border-t mt-2">
+                 <div className="h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-muted-foreground bg-white">
+                    Espacio para Firma y Sello Físico
+                 </div>
+               </div>
+            </CardContent>
+          </Card>
+
+          {/* Materials Table */}
+          <Card>
             <CardContent className="pt-6">
               <MaterialsTable items={items} onItemsChange={setItems} />
             </CardContent>
           </Card>
 
-          {/* Observations & Signature Card */}
-          <Card
-            className="animate-slideInUp"
-            style={{ animationDelay: "0.2s", animationFillMode: "both" }}
-          >
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Observations */}
-                <div className="space-y-3">
-                  <label className="text-sm font-medium text-foreground">
-                    Observaciones
-                  </label>
-                  <Textarea
-                    placeholder="Notas adicionales, condiciones especiales, instrucciones de manejo..."
-                    value={formData.observaciones}
-                    onChange={(e) =>
-                      handleInputChange("observaciones", e.target.value)
-                    }
-                    className="min-h-[128px] resize-none"
-                  />
-                </div>
-
-                {/* Signature */}
-                <div>
-                  <SignaturePad onSignatureChange={setSignature} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Action Buttons */}
-          <div
-            className="flex flex-col sm:flex-row gap-3 justify-end pb-6 animate-slideInUp"
-            style={{ animationDelay: "0.3s", animationFillMode: "both" }}
-          >
+          <div className="flex flex-col sm:flex-row gap-3 justify-end pb-6">
             <Button
               type="button"
               variant="outline"
@@ -294,7 +461,7 @@ export default function MaterialPassPage() {
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || items.length === 0}
+              disabled={isSubmitting}
               className="h-11 px-8"
             >
               {isSubmitting ? (
@@ -303,7 +470,7 @@ export default function MaterialPassPage() {
                   Procesando...
                 </>
               ) : (
-                <>
+                 <>
                   <Send className="h-4 w-4 mr-2" />
                   Registrar Pase
                 </>
@@ -312,18 +479,6 @@ export default function MaterialPassPage() {
           </div>
         </form>
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border bg-card mt-auto">
-        <div className="max-w-5xl mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-muted-foreground">
-            <span>
-              TechSupport Pro - Sistema de Gestión de Soporte Técnico Industrial
-            </span>
-            <span>v1.0.0 | Todos los derechos reservados</span>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
