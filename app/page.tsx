@@ -11,6 +11,7 @@ import {
   MaterialsTable,
   type MaterialItem,
 } from "@/components/materials-table";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   FileText,
   Truck,
@@ -25,57 +26,148 @@ import {
   Phone,
   CreditCard,
   UserCheck,
+  Monitor,
+  Check,
+  ChevronsUpDown,
+  Plus
 } from "lucide-react";
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command"
+import { cn } from "@/lib/utils"
+
+// Mock Destinos
+const MOCK_DESTINOS = [
+  { id: "1", nombre: "C.V.G. ALCASA", direccion: "Zona Industrial Matanzas, Puerto Ordaz", telefono: "0286-9941122" },
+  { id: "2", nombre: "C.V.G. VENALUM", direccion: "Av. Fuerzas Armadas, Puerto Ordaz", telefono: "0286-9503111" },
+  { id: "3", nombre: "C.V.G. FERROMINERA (PLANTA)", direccion: "Pto. Ordaz, Estado Bolívar", telefono: "0286-9303322" },
+  { id: "4", nombre: "TALLER METAL MECANICO CA", direccion: "Zona Ind. Unare II", telefono: "0414-8882233" },
+  { id: "5", nombre: "ALMACEN CENTRAL FMO", direccion: "Ciudad Piar", telefono: "0285-6321144" },
+]
+// generatePDF is now imported dynamically in handleSubmit
 
 export default function MaterialPassPage() {
   const [formData, setFormData] = useState({
-    folio: `PM-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
-    fecha: new Date().toISOString().split("T")[0],
-    hora: new Date().toLocaleTimeString("es-ES", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
-    
+    folio: "86467",
+    fecha: "",
+    hora: "",
+
+
     // Concept Options
     conceptoOpcion: "PRESTAMO",
-    
+
     // Shipping / General Info
     tiempoEstimado: "",
     embargueseA: "",
     ordenCompra: "",
     direccion: "",
     telefono: "",
-    tipoPago: "CONTADO", // Contado or Credito
-    
+    tipoPago: "", // Contado or Credito
+
     // Driver Info
     conductor: "",
     fichaConductor: "",
     vehiculoFMO: "",
     vehiculoParticular: "",
-    
+
     // Dispatch Info
     despachadoPor: "",
     fichaDespachador: "",
     cargoDespachador: "",
     departamentoDespachador: "",
-    
+
     // Observations / Request
     observaciones: "",
-    dirigidoA: "",
-    solicitud: "", // Example: LEIDA AYALA F-12197 /CPU FMO-1195848
   });
+
+  React.useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      fecha: new Date().toISOString().split("T")[0],
+      hora: new Date().toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    }));
+  }, []);
 
   const [items, setItems] = useState<MaterialItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [openDestino, setOpenDestino] = useState(false);
+
+  // Smart Extraction
+  const extractedData = React.useMemo(() => {
+    const text = formData.observaciones;
+    const fichaMatch = text.match(/(?:Ficha[:\s]*|F-?)\s*(\d+)/i);
+    const fmoMatch = text.match(/(?:FMO[:\s-]*|PC[:\s-]*)\s*(\d+)/i);
+
+    return {
+      ficha: fichaMatch ? fichaMatch[1] : null,
+      fmo: fmoMatch ? fmoMatch[1] : null,
+    };
+  }, [formData.observaciones]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+
+    // Map form state to PDF format
+    const pdfData = {
+      numeroPase: formData.folio,
+      concepto: {
+        donacion: formData.conceptoOpcion === "DONACION",
+        devolucion: formData.conceptoOpcion === "DEVOLUCION",
+        prestamo: formData.conceptoOpcion === "PRESTAMO",
+        reparacion: formData.conceptoOpcion === "REPARACION",
+        revision: formData.conceptoOpcion === "REVISION",
+        vendido: formData.conceptoOpcion === "VENDIDO",
+        foraneo: formData.conceptoOpcion === "FORANEO",
+      },
+      embarqueseA: formData.embargueseA,
+      ordenCompra: formData.ordenCompra,
+      direccion: formData.direccion,
+      telefono: formData.telefono,
+      contado: formData.tipoPago === "CONTADO",
+      credito: formData.tipoPago === "CREDITO",
+      conductor: formData.conductor,
+      fichaConductor: formData.fichaConductor,
+      vehiculoFmo: formData.vehiculoFMO,
+      vehiculoParticular: formData.vehiculoParticular,
+      departamento: formData.departamentoDespachador,
+      cargo: formData.cargoDespachador,
+      fichaDespachador: formData.fichaDespachador,
+      despachadoPor: formData.despachadoPor,
+      dirigidoA: formData.observaciones,
+      solicitud: "",
+    };
+
+    try {
+      // Dynamic import to optimize performance
+      const { generatePDF } = await import("@/lib/generatePdf");
+      generatePDF(pdfData, items);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    }
+
     // Simulate submission
     await new Promise((resolve) => setTimeout(resolve, 1500));
     setIsSubmitting(false);
@@ -84,7 +176,7 @@ export default function MaterialPassPage() {
 
   const handleReset = () => {
     setFormData({
-      folio: `PM-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
+      folio: "86467",
       fecha: new Date().toISOString().split("T")[0],
       hora: new Date().toLocaleTimeString("es-ES", {
         hour: "2-digit",
@@ -96,7 +188,7 @@ export default function MaterialPassPage() {
       ordenCompra: "",
       direccion: "",
       telefono: "",
-      tipoPago: "CONTADO",
+      tipoPago: "",
       conductor: "",
       fichaConductor: "",
       vehiculoFMO: "",
@@ -106,8 +198,6 @@ export default function MaterialPassPage() {
       cargoDespachador: "",
       departamentoDespachador: "",
       observaciones: "",
-      dirigidoA: "",
-      solicitud: "",
     });
     setItems([]);
     setIsSubmitted(false);
@@ -145,6 +235,7 @@ export default function MaterialPassPage() {
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
+              <SidebarTrigger className="text-primary-foreground hover:bg-primary-foreground/10" />
               <div className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center">
                 <Truck className="h-6 w-6" />
               </div>
@@ -161,8 +252,6 @@ export default function MaterialPassPage() {
               <div className="flex items-center gap-2 text-sm text-primary-foreground/80">
                 <Calendar className="h-4 w-4" />
                 <span>{formData.fecha}</span>
-                <Clock className="h-4 w-4 ml-2" />
-                <span>{formData.hora}</span>
               </div>
             </div>
           </div>
@@ -171,45 +260,56 @@ export default function MaterialPassPage() {
 
       <main className="max-w-5xl mx-auto px-4 space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          
+
           {/* Concept Options */}
           <Card>
             <CardHeader className="pb-3 border-b">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                Concepto del Pase
+              <CardTitle className="text-lg font-semibold flex items-center justify-between gap-2 w-full">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Concepto del Pase
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="folio-input" className="text-sm font-medium">N° Pase:</Label>
+                  <Input
+                    id="folio-input"
+                    className="h-8 w-32 border-slate-400 font-mono"
+                    value={formData.folio}
+                    onChange={(e) => handleInputChange("folio", e.target.value)}
+                  />
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
-               <RadioGroup 
-                  value={formData.conceptoOpcion} 
-                  onValueChange={(val) => handleInputChange("conceptoOpcion", val)}
-                  className="grid grid-cols-2 md:grid-cols-4 gap-4"
-                >
-                  {["DONACION", "DEVOLUCION", "PRESTAMO", "REPARACION", "REVISION", "VENDIDO", "FORANEO"].map((opcion) => (
-                    <label 
-                      key={opcion} 
-                      htmlFor={opcion}
-                      className="flex items-center space-x-2 border-2 border-slate-600 rounded-lg p-3 hover:bg-muted/50 cursor-pointer"
-                    >
-                      <RadioGroupItem 
-                        value={opcion} 
-                        id={opcion} 
-                        className="border-slate-600 text-primary w-5 h-5 transition-none duration-0" 
-                      />
-                      <span className="font-medium text-base text-foreground">{opcion}</span>
-                    </label>
-                  ))}
-               </RadioGroup>
-               <div className="mt-4 pt-4 border-t border-slate-300">
-                  <Label>Tiempo Estimado de Regreso a la Empresa</Label>
-                  <Input 
-                    className="mt-2 border-slate-600"
-                    placeholder="Ej. 3 días, 1 semana, Indefinido..." 
-                    value={formData.tiempoEstimado}
-                    onChange={(e) => handleInputChange("tiempoEstimado", e.target.value)}
-                  />
-               </div>
+              <RadioGroup
+                value={formData.conceptoOpcion}
+                onValueChange={(val) => handleInputChange("conceptoOpcion", val)}
+                className="grid grid-cols-2 md:grid-cols-4 gap-4"
+              >
+                {["DONACION", "DEVOLUCION", "PRESTAMO", "REPARACION", "REVISION", "VENDIDO", "FORANEO"].map((opcion) => (
+                  <label
+                    key={opcion}
+                    htmlFor={opcion}
+                    className="flex items-center space-x-2 border-2 border-slate-600 rounded-lg p-3 hover:bg-muted/50 cursor-pointer"
+                  >
+                    <RadioGroupItem
+                      value={opcion}
+                      id={opcion}
+                      className="border-slate-600 text-primary w-5 h-5 transition-none duration-0"
+                    />
+                    <span className="font-medium text-base text-foreground">{opcion}</span>
+                  </label>
+                ))}
+              </RadioGroup>
+              <div className="mt-4 pt-4 border-t border-slate-300">
+                <Label>Tiempo Estimado de Regreso a la Empresa</Label>
+                <Input
+                  className="mt-2 border-slate-600"
+                  placeholder="Ej. 3 días, 1 semana, Indefinido..."
+                  value={formData.tiempoEstimado}
+                  onChange={(e) => handleInputChange("tiempoEstimado", e.target.value)}
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -222,62 +322,141 @@ export default function MaterialPassPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div className="space-y-2 md:col-span-2">
-                  <Label>Embárguese a (Nombre / Empresa)</Label>
-                  <Input 
-                    className="border-slate-400"
-                    value={formData.embargueseA}
-                    onChange={(e) => handleInputChange("embargueseA", e.target.value)}
-                  />
-               </div>
-               <div className="space-y-2">
-                  <Label>N° Orden de Compra</Label>
-                  <Input 
-                    className="border-slate-400"
-                    value={formData.ordenCompra}
-                    onChange={(e) => handleInputChange("ordenCompra", e.target.value)}
-                  />
-               </div>
-               <div className="space-y-2">
-                  <Label>Teléfono</Label>
-                  <Input 
-                     type="tel"
-                     className="border-slate-400"
-                    value={formData.telefono}
-                    onChange={(e) => handleInputChange("telefono", e.target.value)}
-                  />
-               </div>
-               <div className="space-y-2 md:col-span-2">
-                  <Label>Dirección</Label>
-                  <Input 
-                    className="border-slate-400"
-                    value={formData.direccion}
-                    onChange={(e) => handleInputChange("direccion", e.target.value)}
-                  />
-               </div>
-               <div className="md:col-span-2 pt-2">
-                  <Label className="block mb-2">Condición de Pago</Label>
-                  <RadioGroup 
-                    value={formData.tipoPago} 
-                    onValueChange={(val) => handleInputChange("tipoPago", val)}
-                    className="flex gap-6"
+              <div className="space-y-2 md:col-span-2">
+                <Label>Embárguese a (Nombre / Empresa)</Label>
+                <Popover open={openDestino} onOpenChange={setOpenDestino}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openDestino}
+                      className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
+                    >
+                      {formData.embargueseA || "Seleccionar o escribir destino..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar destino..." />
+                      <CommandList>
+                        <CommandEmpty className="p-2">
+                          <p className="text-sm mb-2">No se encontró el destino.</p>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="w-full gap-2"
+                            onClick={() => {
+                              handleInputChange("embargueseA", "")
+                              handleInputChange("direccion", "")
+                              handleInputChange("telefono", "")
+                              setOpenDestino(false)
+                            }}
+                          >
+                            <Plus className="h-4 w-4" />
+                            Nuevo Destino (Limpiar campos)
+                          </Button>
+                        </CommandEmpty>
+                        <CommandGroup heading="Destinos Registrados">
+                          {MOCK_DESTINOS.map((destino) => (
+                            <CommandItem
+                              key={destino.id}
+                              value={destino.nombre}
+                              onSelect={() => {
+                                handleInputChange("embargueseA", destino.nombre)
+                                handleInputChange("direccion", destino.direccion)
+                                handleInputChange("telefono", destino.telefono)
+                                setOpenDestino(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.embargueseA === destino.nombre ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span>{destino.nombre}</span>
+                                <span className="text-xs text-muted-foreground truncate max-w-[300px]">{destino.direccion}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                        <CommandSeparator />
+                        <CommandGroup>
+                          <CommandItem
+                            onSelect={() => {
+                              handleInputChange("embargueseA", "")
+                              handleInputChange("direccion", "")
+                              handleInputChange("telefono", "")
+                              setOpenDestino(false)
+                            }}
+                            className="text-primary font-medium"
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Agregar Nuevo / Personalizado
+                          </CommandItem>
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {/* Fallback input for manual typing if not selected from list */}
+                <Input
+                  className="mt-2 border-slate-400"
+                  placeholder="Escriba aquí para especificar manualmente..."
+                  value={formData.embargueseA}
+                  onChange={(e) => handleInputChange("embargueseA", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>N° Orden de Compra</Label>
+                <Input
+                  className="border-slate-400"
+                  value={formData.ordenCompra}
+                  onChange={(e) => handleInputChange("ordenCompra", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Teléfono</Label>
+                <Input
+                  type="tel"
+                  className="border-slate-400"
+                  value={formData.telefono}
+                  onChange={(e) => handleInputChange("telefono", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Dirección</Label>
+                <Input
+                  className="border-slate-400"
+                  value={formData.direccion}
+                  onChange={(e) => handleInputChange("direccion", e.target.value)}
+                />
+              </div>
+              <div className="md:col-span-2 pt-2">
+                <Label className="block mb-2">Condición de Pago</Label>
+                <RadioGroup
+                  value={formData.tipoPago}
+                  onValueChange={(val) => handleInputChange("tipoPago", val)}
+                  className="flex gap-6"
+                >
+                  <label
+                    className="flex items-center space-x-2 cursor-pointer"
+                    htmlFor="contado"
                   >
-                    <label 
-                      className="flex items-center space-x-2 cursor-pointer"
-                      htmlFor="contado"
-                    >
-                      <RadioGroupItem value="CONTADO" id="contado" className="border-slate-500 w-5 h-5 transition-none duration-0"/>
-                      <span className="text-base font-medium">Contado</span>
-                    </label>
-                    <label 
-                      className="flex items-center space-x-2 cursor-pointer"
-                      htmlFor="credito"
-                    >
-                      <RadioGroupItem value="CREDITO" id="credito" className="border-slate-500 w-5 h-5 transition-none duration-0"/>
-                      <span className="text-base font-medium">Crédito</span>
-                    </label>
-                  </RadioGroup>
-               </div>
+                    <RadioGroupItem value="CONTADO" id="contado" className="border-slate-500 w-5 h-5 transition-none duration-0" />
+                    <span className="text-base font-medium">Contado</span>
+                  </label>
+                  <label
+                    className="flex items-center space-x-2 cursor-pointer"
+                    htmlFor="credito"
+                  >
+                    <RadioGroupItem value="CREDITO" id="credito" className="border-slate-500 w-5 h-5 transition-none duration-0" />
+                    <span className="text-base font-medium">Crédito</span>
+                  </label>
+                </RadioGroup>
+              </div>
             </CardContent>
           </Card>
 
@@ -292,7 +471,7 @@ export default function MaterialPassPage() {
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nombre del Conductor</Label>
-                <Input 
+                <Input
                   className="border-slate-400"
                   value={formData.conductor}
                   onChange={(e) => handleInputChange("conductor", e.target.value)}
@@ -300,7 +479,7 @@ export default function MaterialPassPage() {
               </div>
               <div className="space-y-2">
                 <Label>Ficha o C.I.</Label>
-                <Input 
+                <Input
                   className="border-slate-400"
                   value={formData.fichaConductor}
                   onChange={(e) => handleInputChange("fichaConductor", e.target.value)}
@@ -309,7 +488,7 @@ export default function MaterialPassPage() {
               <div className="md:col-span-2 pt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Vehículo F.M.O</Label>
-                  <Input 
+                  <Input
                     className="border-slate-400"
                     placeholder="Serial del vehículo"
                     value={formData.vehiculoFMO as string}
@@ -318,7 +497,7 @@ export default function MaterialPassPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Vehículo Particular</Label>
-                  <Input 
+                  <Input
                     className="border-slate-400"
                     placeholder="Marca y Modelo"
                     value={formData.vehiculoParticular as string}
@@ -329,8 +508,8 @@ export default function MaterialPassPage() {
             </CardContent>
           </Card>
 
-           {/* Dispatch Info */}
-           <Card className="border-slate-300">
+          {/* Dispatch Info */}
+          <Card className="border-slate-300">
             <CardHeader className="pb-3 border-b border-slate-300">
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
                 <User className="h-5 w-5 text-primary" />
@@ -340,7 +519,7 @@ export default function MaterialPassPage() {
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2 md:col-span-2">
                 <Label>Nombre</Label>
-                <Input 
+                <Input
                   className="border-slate-400"
                   value={formData.despachadoPor}
                   onChange={(e) => handleInputChange("despachadoPor", e.target.value)}
@@ -348,7 +527,7 @@ export default function MaterialPassPage() {
               </div>
               <div className="space-y-2">
                 <Label>Ficha</Label>
-                <Input 
+                <Input
                   className="border-slate-400"
                   value={formData.fichaDespachador}
                   onChange={(e) => handleInputChange("fichaDespachador", e.target.value)}
@@ -356,7 +535,7 @@ export default function MaterialPassPage() {
               </div>
               <div className="space-y-2">
                 <Label>Cargo</Label>
-                <Input 
+                <Input
                   className="border-slate-400"
                   value={formData.cargoDespachador}
                   onChange={(e) => handleInputChange("cargoDespachador", e.target.value)}
@@ -364,7 +543,7 @@ export default function MaterialPassPage() {
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label>Departamento</Label>
-                <Input 
+                <Input
                   className="border-slate-400"
                   value={formData.departamentoDespachador}
                   onChange={(e) => handleInputChange("departamentoDespachador", e.target.value)}
@@ -382,38 +561,38 @@ export default function MaterialPassPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
-               <div className="space-y-2">
-                <Label>Observaciones</Label>
-                <Textarea 
+              <div className="space-y-2">
+                <Label>Observaciones, Dirigido a, Solicitud:</Label>
+                <Textarea
                   className="min-h-[100px] border-slate-400"
+                  placeholder="Ej: LEIDA AYALA f-12197 / CPU FMO-119548"
                   value={formData.observaciones}
                   onChange={(e) => handleInputChange("observaciones", e.target.value)}
                 />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Dirigido a</Label>
-                  <Input 
-                    className="border-slate-400"
-                    value={formData.dirigidoA}
-                    onChange={(e) => handleInputChange("dirigidoA", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Solicitud (Ej: Nombre / Ficha / Dpto)</Label>
-                  <Input 
-                    className="border-slate-400"
-                     placeholder="Ej: LEIDA AYALA F-12197 /CPU"
-                    value={formData.solicitud}
-                    onChange={(e) => handleInputChange("solicitud", e.target.value)}
-                  />
-                </div>
+
+                {/* Detected Tags */}
+                {(extractedData.ficha || extractedData.fmo) && (
+                  <div className="flex gap-2 animate-fadeIn">
+                    {extractedData.ficha && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                        <User className="h-3 w-3" />
+                        Ficha: {extractedData.ficha}
+                      </div>
+                    )}
+                    {extractedData.fmo && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium border border-purple-200">
+                        <Monitor className="h-3 w-3" />
+                        FMO: {extractedData.fmo}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
 
-           {/* Authorization - Static */}
-           <Card className="bg-muted/30">
+          {/* Authorization - Static */}
+          <Card className="bg-muted/30">
             <CardHeader className="pb-3 border-b">
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
                 <UserCheck className="h-5 w-5 text-primary" />
@@ -421,23 +600,23 @@ export default function MaterialPassPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-               <div className="space-y-1">
-                 <Label className="text-xs text-muted-foreground uppercase">Autorizado Por</Label>
-                 <div className="font-medium text-lg">Carmen Marquez</div>
-               </div>
-               <div className="space-y-1">
-                 <Label className="text-xs text-muted-foreground uppercase">Cargo</Label>
-                 <div className="font-medium">Gerente de Telemática (e)</div>
-               </div>
-               <div className="space-y-1">
-                 <Label className="text-xs text-muted-foreground uppercase">Ficha</Label>
-                 <div className="font-medium">15508</div>
-               </div>
-               <div className="md:col-span-3 pt-6 border-t mt-2">
-                 <div className="h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-muted-foreground bg-white">
-                    Espacio para Firma y Sello Físico
-                 </div>
-               </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground uppercase">Autorizado Por</Label>
+                <div className="font-medium text-lg">Carmen Marquez</div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground uppercase">Cargo</Label>
+                <div className="font-medium">Gerente de Telemática (e)</div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground uppercase">Ficha</Label>
+                <div className="font-medium">15508</div>
+              </div>
+              <div className="md:col-span-3 pt-6 border-t mt-2">
+                <div className="h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-muted-foreground bg-white">
+                  Espacio para Firma y Sello Físico
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -470,7 +649,7 @@ export default function MaterialPassPage() {
                   Procesando...
                 </>
               ) : (
-                 <>
+                <>
                   <Send className="h-4 w-4 mr-2" />
                   Registrar Pase
                 </>

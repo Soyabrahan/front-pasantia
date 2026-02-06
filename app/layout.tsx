@@ -30,6 +30,10 @@ export const metadata: Metadata = {
   },
 }
 
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/app-sidebar"
+import { Separator } from "@/components/ui/separator"
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,7 +42,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans antialiased`}>
-        {children}
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset>
+            {children}
+          </SidebarInset>
+        </SidebarProvider>
         <Analytics />
       </body>
     </html>

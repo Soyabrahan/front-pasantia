@@ -6,24 +6,23 @@ import { Plus, Trash2, Package } from "lucide-react"
 
 export interface MaterialItem {
   id: string
-  equipo: string
   cantidad: string
   unidad: string
   descripcion: string
 }
+
 
 interface MaterialsTableProps {
   items: MaterialItem[]
   onItemsChange: (items: MaterialItem[]) => void
 }
 
-const UNIDADES = ["Pza", "Und", "Kit", "Mt", "Kg", "Lt", "Caja", "Rollo"]
+const UNIDADES = ["Pza", "Und", "Mt", "Kg", "Caja", "Rollo"]
 
 export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
   const addItem = () => {
     const newItem: MaterialItem = {
       id: crypto.randomUUID(),
-      equipo: "",
       cantidad: "",
       unidad: "Und",
       descripcion: "",
@@ -65,19 +64,16 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
         {/* Table Header */}
         <div className="grid grid-cols-12 gap-2 p-3 bg-muted border-b-2 border-slate-400">
           <div className="col-span-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Equipo
-          </div>
-          <div className="col-span-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Cant.
           </div>
-          <div className="col-span-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="col-span-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Unidad
           </div>
-          <div className="col-span-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="col-span-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Descripción (Marca/Serial)
           </div>
           <div className="col-span-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">
-            
+
           </div>
         </div>
 
@@ -97,14 +93,6 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
                 style={{ animationDelay: `${index * 50}ms`, animationFillMode: "both" }}
               >
                 <div className="col-span-3">
-                   <Input
-                    placeholder="Nombre del equipo"
-                    value={item.equipo}
-                    onChange={(e) => updateItem(item.id, "equipo", e.target.value)}
-                    className="h-9 border-slate-400"
-                  />
-                </div>
-                <div className="col-span-2">
                   <Input
                     type="number"
                     placeholder="0"
@@ -114,7 +102,7 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
                     min="0"
                   />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-3">
                   <select
                     value={item.unidad}
                     onChange={(e) => updateItem(item.id, "unidad", e.target.value)}
@@ -127,7 +115,7 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
                     ))}
                   </select>
                 </div>
-                <div className="col-span-4">
+                <div className="col-span-5">
                   <Input
                     placeholder="Marca, serial, detalles..."
                     value={item.descripcion}
