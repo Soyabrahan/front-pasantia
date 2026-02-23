@@ -48,25 +48,31 @@ import {
 } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
 
-// Mock Destinos
-const MOCK_DESTINOS = [
-  { id: "1", nombre: "C.V.G. ALCASA", direccion: "Zona Industrial Matanzas, Puerto Ordaz", telefono: "0286-9941122" },
-  { id: "2", nombre: "C.V.G. VENALUM", direccion: "Av. Fuerzas Armadas, Puerto Ordaz", telefono: "0286-9503111" },
-  { id: "3", nombre: "C.V.G. FERROMINERA (PLANTA)", direccion: "Pto. Ordaz, Estado Bolívar", telefono: "0286-9303322" },
-  { id: "4", nombre: "TALLER METAL MECANICO CA", direccion: "Zona Ind. Unare II", telefono: "0414-8882233" },
-  { id: "5", nombre: "ALMACEN CENTRAL FMO", direccion: "Ciudad Piar", telefono: "0285-6321144" },
-]
-// generatePDF is now imported dynamically in handleSubmit
+import { api } from "@/lib/api-client";
+
+interface Destino {
+  id: string | number;
+  nombre: string;
+  direccion: string;
+  telefono: string;
+}
 
 export default function MaterialPassPage() {
+  const [destinos, setDestinos] = useState<Destino[]>([]);
+  const [empleados, setEmpleados] = useState<any[]>([]);
+  const [vehiculos, setVehiculos] = useState<any[]>([]);
+  const [loadingDestinos, setLoadingDestinos] = useState(true);
+  const [loadingEmpleados, setLoadingEmpleados] = useState(true);
+  const [loadingVehiculos, setLoadingVehiculos] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [formData, setFormData] = useState({
-    folio: "86467",
+    folio: "",
     fecha: "",
     hora: "",
 
 
     // Concept Options
-    conceptoOpcion: "PRESTAMO",
+    conceptoOpcion: "",
 
     // Shipping / General Info
     tiempoEstimado: "",
@@ -88,11 +94,17 @@ export default function MaterialPassPage() {
     cargoDespachador: "",
     departamentoDespachador: "",
 
+    // Authorization Info
+    autorizadoPor: "Carmen Marquez",
+    cargoAutorizador: "Gerente de Telemática (e)",
+    fichaAutorizador: "15508",
+
     // Observations / Request
     observaciones: "",
   });
 
   React.useEffect(() => {
+    setMounted(true);
     setFormData((prev) => ({
       ...prev,
       fecha: new Date().toISOString().split("T")[0],
@@ -101,12 +113,80 @@ export default function MaterialPassPage() {
         minute: "2-digit",
       }),
     }));
+
+    // Cargar destinos desde el backend
+    const fetchDestinos = async () => {
+      try {
+        const data = await api.get<Destino[]>("/destinos");
+        setDestinos(data);
+      } catch (error) {
+        console.error("Error al cargar destinos:", error);
+      } finally {
+        setLoadingDestinos(false);
+      }
+    };
+
+    const fetchEmpleados = async () => {
+      try {
+        const data = await api.get<any[]>("/empleados");
+        setEmpleados(data);
+      } catch (error) {
+        console.error("Error al cargar empleados:", error);
+      } finally {
+        setLoadingEmpleados(false);
+      }
+    };
+
+    const fetchVehiculos = async () => {
+      try {
+        const data = await api.get<any[]>("/vehiculos");
+        setVehiculos(data);
+      } catch (error) {
+        console.error("Error al cargar vehículos:", error);
+      } finally {
+        setLoadingVehiculos(false);
+      }
+    };
+
+    const fetchUltimoNumero = async () => {
+      try {
+        const lastNum = await api.get<string>("/pases/ultimo-numero");
+        if (lastNum) {
+          // Si por alguna razón viene como objeto { numeroPase: "..." }
+          let rawNum = typeof lastNum === 'object' && (lastNum as any).numeroPase 
+            ? (lastNum as any).numeroPase 
+            : lastNum;
+            
+          const lastNumStr = String(rawNum);
+          
+          // Intentar incrementar si es numérico
+          const baseNum = parseInt(lastNumStr.replace(/\D/g, ""));
+          if (!isNaN(baseNum)) {
+            const nextNum = (baseNum + 1).toString().padStart(lastNumStr.length, "0");
+            handleInputChange("folio", nextNum);
+          } else {
+            handleInputChange("folio", lastNumStr);
+          }
+        }
+      } catch (error) {
+        console.error("Error al cargar último número:", error);
+      }
+    };
+
+    fetchDestinos();
+    fetchEmpleados();
+    fetchVehiculos();
+    fetchUltimoNumero();
   }, []);
 
   const [items, setItems] = useState<MaterialItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [openDestino, setOpenDestino] = useState(false);
+  const [openEmpleado, setOpenEmpleado] = useState(false);
+  const [openConductor, setOpenConductor] = useState(false);
+  const [openVehiculoFMO, setOpenVehiculoFMO] = useState(false);
+  const [openVehiculoParticular, setOpenVehiculoParticular] = useState(false);
 
   // Smart Extraction
   const extractedData = React.useMemo(() => {
@@ -130,53 +210,79 @@ export default function MaterialPassPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Map form state to PDF format
-    const pdfData = {
+    const getEmpleadoId = (ficha: string) => {
+      const emp = empleados.find(e => e.ficha === ficha);
+      return emp ? emp.id : null;
+    };
+
+    const paseBody = {
       numeroPase: formData.folio,
-      concepto: {
-        donacion: formData.conceptoOpcion === "DONACION",
-        devolucion: formData.conceptoOpcion === "DEVOLUCION",
-        prestamo: formData.conceptoOpcion === "PRESTAMO",
-        reparacion: formData.conceptoOpcion === "REPARACION",
-        revision: formData.conceptoOpcion === "REVISION",
-        vendido: formData.conceptoOpcion === "VENDIDO",
-        foraneo: formData.conceptoOpcion === "FORANEO",
-      },
-      embarqueseA: formData.embargueseA,
-      ordenCompra: formData.ordenCompra,
-      direccion: formData.direccion,
-      telefono: formData.telefono,
-      contado: formData.tipoPago === "CONTADO",
-      credito: formData.tipoPago === "CREDITO",
-      conductor: formData.conductor,
-      fichaConductor: formData.fichaConductor,
-      vehiculoFmo: formData.vehiculoFMO,
-      vehiculoParticular: formData.vehiculoParticular,
-      departamento: formData.departamentoDespachador,
-      cargo: formData.cargoDespachador,
-      fichaDespachador: formData.fichaDespachador,
-      despachadoPor: formData.despachadoPor,
-      dirigidoA: formData.observaciones,
-      solicitud: "",
+      concepto: formData.conceptoOpcion,
+      destinoId: destinos.find(d => d.nombre === formData.embargueseA)?.id || null,
+      numero_compra: formData.ordenCompra,
+      tipo_pago: formData.tipoPago,
+      // Intentar obtener los IDs reales de los empleados vinculados
+      solicitadorId: getEmpleadoId("0000") || 1, // Por ahora default admin o el primer empleado
+      conductorId: getEmpleadoId(formData.fichaConductor),
+      despachadorId: getEmpleadoId(formData.fichaDespachador),
+      autorizadorId: getEmpleadoId("15508"), // Carmen Marquez
+      vehiculoId: formData.vehiculoFMO ? parseInt(formData.vehiculoFMO) : null,
+      equipos: items.map(item => ({
+        descripcion: item.descripcion,
+        cantidad: typeof item.cantidad === 'string' ? parseInt(item.cantidad) : item.cantidad,
+        unidad: item.unidad
+      }))
     };
 
     try {
-      // Dynamic import to optimize performance
+      // Enviar al backend
+      await api.post("/pases", paseBody);
+
+      // Generar PDF original
+      const pdfData = {
+        numeroPase: formData.folio,
+        concepto: {
+          donacion: formData.conceptoOpcion === "DONACION",
+          devolucion: formData.conceptoOpcion === "DEVOLUCION",
+          prestamo: formData.conceptoOpcion === "PRESTAMO",
+          reparacion: formData.conceptoOpcion === "REPARACION",
+          revision: formData.conceptoOpcion === "REVISION",
+          vendido: formData.conceptoOpcion === "VENDIDO",
+          foraneo: formData.conceptoOpcion === "FORANEO",
+        },
+        embarqueseA: formData.embargueseA,
+        ordenCompra: formData.ordenCompra,
+        direccion: formData.direccion,
+        telefono: formData.telefono,
+        contado: formData.tipoPago === "CONTADO",
+        credito: formData.tipoPago === "CREDITO",
+        conductor: formData.conductor,
+        fichaConductor: formData.fichaConductor,
+        vehiculoFmo: formData.vehiculoFMO,
+        vehiculoParticular: formData.vehiculoParticular,
+        departamento: formData.departamentoDespachador,
+        cargo: formData.cargoDespachador,
+        fichaDespachador: formData.fichaDespachador,
+        despachadoPor: formData.despachadoPor,
+        dirigidoA: formData.observaciones,
+        solicitud: "",
+      };
+
       const { generatePDF } = await import("@/lib/generatePdf");
       generatePDF(pdfData, items);
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-    }
 
-    // Simulate submission
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+      setIsSubmitted(true);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido al registrar el pase";
+      alert(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleReset = () => {
     setFormData({
-      folio: "86467",
+      folio: "",
       fecha: new Date().toISOString().split("T")[0],
       hora: new Date().toLocaleTimeString("es-ES", {
         hour: "2-digit",
@@ -227,6 +333,8 @@ export default function MaterialPassPage() {
       </div>
     );
   }
+
+  if (!mounted) return null;
 
   return (
     <div className="min-h-screen bg-background pb-10">
@@ -358,29 +466,33 @@ export default function MaterialPassPage() {
                           </Button>
                         </CommandEmpty>
                         <CommandGroup heading="Destinos Registrados">
-                          {MOCK_DESTINOS.map((destino) => (
-                            <CommandItem
-                              key={destino.id}
-                              value={destino.nombre}
-                              onSelect={() => {
-                                handleInputChange("embargueseA", destino.nombre)
-                                handleInputChange("direccion", destino.direccion)
-                                handleInputChange("telefono", destino.telefono)
-                                setOpenDestino(false)
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  formData.embargueseA === destino.nombre ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              <div className="flex flex-col">
-                                <span>{destino.nombre}</span>
-                                <span className="text-xs text-muted-foreground truncate max-w-[300px]">{destino.direccion}</span>
-                              </div>
-                            </CommandItem>
-                          ))}
+                          {loadingDestinos ? (
+                            <div className="p-4 text-center text-sm text-muted-foreground">Cargando destinos...</div>
+                          ) : (
+                            destinos.map((destino) => (
+                              <CommandItem
+                                key={destino.id}
+                                value={destino.nombre}
+                                onSelect={() => {
+                                  handleInputChange("embargueseA", destino.nombre)
+                                  handleInputChange("direccion", destino.direccion)
+                                  handleInputChange("telefono", destino.telefono)
+                                  setOpenDestino(false)
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.embargueseA === destino.nombre ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span>{destino.nombre}</span>
+                                  <span className="text-xs text-muted-foreground truncate max-w-[300px]">{destino.direccion}</span>
+                                </div>
+                              </CommandItem>
+                            ))
+                          )}
                         </CommandGroup>
                         <CommandSeparator />
                         <CommandGroup>
@@ -471,8 +583,68 @@ export default function MaterialPassPage() {
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nombre del Conductor</Label>
+                <Popover open={openConductor} onOpenChange={setOpenConductor}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openConductor}
+                      className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
+                    >
+                      {formData.conductor || "Seleccionar o escribir conductor..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar conductor por nombre o ficha..." />
+                      <CommandList>
+                        <CommandEmpty className="p-2 text-sm">No se encontró el conductor.</CommandEmpty>
+                        <CommandGroup heading="Conductores Registrados">
+                          {empleados.filter(e => e.rol === "Conductor").map((empleado) => (
+                            <CommandItem
+                              key={empleado.id}
+                              value={`${empleado.nombre} ${empleado.ficha}`}
+                              onSelect={() => {
+                                handleInputChange("conductor", empleado.nombre)
+                                handleInputChange("fichaConductor", empleado.ficha)
+                                setOpenConductor(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.conductor === empleado.nombre ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span>{empleado.nombre}</span>
+                                <span className="text-xs text-muted-foreground">Ficha: {empleado.ficha}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                        <CommandSeparator />
+                        <CommandGroup>
+                          <CommandItem
+                            onSelect={() => {
+                              handleInputChange("conductor", "")
+                              handleInputChange("fichaConductor", "")
+                              setOpenConductor(false)
+                            }}
+                            className="text-primary font-medium"
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Limpiar / Personalizado
+                          </CommandItem>
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 <Input
-                  className="border-slate-400"
+                  className="mt-2 border-slate-400"
+                  placeholder="Escriba aquí si es externo..."
                   value={formData.conductor}
                   onChange={(e) => handleInputChange("conductor", e.target.value)}
                 />
@@ -490,16 +662,58 @@ export default function MaterialPassPage() {
                   <Label>Vehículo F.M.O</Label>
                   <Input
                     className="border-slate-400"
-                    placeholder="Serial del vehículo"
+                    placeholder="Se llenará automáticamente o escriba..."
                     value={formData.vehiculoFMO as string}
                     onChange={(e) => handleInputChange("vehiculoFMO", e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Vehículo Particular</Label>
+                  <Popover open={openVehiculoParticular} onOpenChange={setOpenVehiculoParticular}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openVehiculoParticular}
+                        className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
+                      >
+                        {formData.vehiculoParticular || "Elegir vehículo particular..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar por placa..." />
+                        <CommandList>
+                          <CommandEmpty>No registrado.</CommandEmpty>
+                          <CommandGroup heading="Vehículos Registrados">
+                            {vehiculos.map((v) => (
+                              <CommandItem
+                                key={v.id}
+                                value={v.placa || v.fmo}
+                                onSelect={() => {
+                                  if (v.esFMO) {
+                                    handleInputChange("vehiculoParticular", v.placa || "")
+                                    handleInputChange("vehiculoFMO", v.fmo)
+                                  } else {
+                                    handleInputChange("vehiculoParticular", v.placa)
+                                    handleInputChange("vehiculoFMO", "")
+                                  }
+                                  setOpenVehiculoParticular(false)
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", formData.vehiculoParticular === v.placa ? "opacity-100" : "opacity-0")} />
+                                {v.placa} {v.esFMO ? `(FMO: ${v.fmo})` : ""}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <Input
-                    className="border-slate-400"
-                    placeholder="Marca y Modelo"
+                    className="mt-2 border-slate-400"
+                    placeholder="Marca, Modelo o Placa..."
                     value={formData.vehiculoParticular as string}
                     onChange={(e) => handleInputChange("vehiculoParticular", e.target.value)}
                   />
@@ -519,8 +733,79 @@ export default function MaterialPassPage() {
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2 md:col-span-2">
                 <Label>Nombre</Label>
+                <Popover open={openEmpleado} onOpenChange={setOpenEmpleado}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openEmpleado}
+                      className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
+                    >
+                      {formData.despachadoPor || "Seleccionar o escribir empleado..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar empleado por nombre o ficha..." />
+                      <CommandList>
+                        <CommandEmpty className="p-2 text-sm">No se encontró el empleado.</CommandEmpty>
+                        <CommandGroup heading="Empleados Registrados">
+                          {loadingEmpleados ? (
+                            <div className="p-4 text-center text-sm text-muted-foreground">Cargando empleados...</div>
+                          ) : (
+                            empleados.filter(e => e.rol === "Despachador").map((empleado) => (
+                              <CommandItem
+                                key={empleado.id}
+                                value={`${empleado.nombre} ${empleado.ficha}`}
+                                onSelect={() => {
+                                  handleInputChange("despachadoPor", empleado.nombre)
+                                  handleInputChange("fichaDespachador", empleado.ficha)
+                                  handleInputChange("cargoDespachador", empleado.cargo)
+                                  handleInputChange("departamentoDespachador", empleado.departamento)
+                                  setOpenEmpleado(false)
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.despachadoPor === empleado.nombre ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span>{empleado.nombre}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    Ficha: {empleado.ficha} | {empleado.cargo}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))
+                          )}
+                        </CommandGroup>
+                        <CommandSeparator />
+                        <CommandGroup>
+                          <CommandItem
+                            onSelect={() => {
+                              handleInputChange("despachadoPor", "")
+                              handleInputChange("fichaDespachador", "")
+                              handleInputChange("cargoDespachador", "")
+                              handleInputChange("departamentoDespachador", "")
+                              setOpenEmpleado(false)
+                            }}
+                            className="text-primary font-medium"
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Limpiar / Personalizado
+                          </CommandItem>
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {/* Fallback input for manual typing */}
                 <Input
-                  className="border-slate-400"
+                  className="mt-2 border-slate-400"
+                  placeholder="Nombre manualmente..."
                   value={formData.despachadoPor}
                   onChange={(e) => handleInputChange("despachadoPor", e.target.value)}
                 />
@@ -602,20 +887,27 @@ export default function MaterialPassPage() {
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground uppercase">Autorizado Por</Label>
-                <div className="font-medium text-lg">Carmen Marquez</div>
+                <Input 
+                  className="border-slate-400 font-medium h-8"
+                  value={formData.autorizadoPor}
+                  onChange={(e) => handleInputChange("autorizadoPor", e.target.value)}
+                />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground uppercase">Cargo</Label>
-                <div className="font-medium">Gerente de Telemática (e)</div>
+                <Input 
+                  className="border-slate-400 h-8"
+                  value={formData.cargoAutorizador}
+                  onChange={(e) => handleInputChange("cargoAutorizador", e.target.value)}
+                />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground uppercase">Ficha</Label>
-                <div className="font-medium">15508</div>
-              </div>
-              <div className="md:col-span-3 pt-6 border-t mt-2">
-                <div className="h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-muted-foreground bg-white">
-                  Espacio para Firma y Sello Físico
-                </div>
+                <Input 
+                  className="border-slate-400 h-8 font-medium"
+                  value={formData.fichaAutorizador}
+                  onChange={(e) => handleInputChange("fichaAutorizador", e.target.value)}
+                />
               </div>
             </CardContent>
           </Card>

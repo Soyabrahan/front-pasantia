@@ -16,62 +16,70 @@ import {
 import { Search, Filter, Calendar as CalendarIcon, FileText, Pencil, History } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
-// Mock Data
-const MOCK_DATA = Array.from({ length: 25 }).map((_, i) => {
-    const id = 86467 - i;
-    return {
-        id: id.toString(),
-        fecha: new Date(2023, 10, 1 + i).toISOString().split("T")[0],
-        hora: "08:30",
-        solicitante: `Usuario ${i + 1}`,
-        fichaSolicitante: `F-${1000 + i}`,
-        equipo: i % 3 === 0 ? `Laptop Dell ${i}` : `Monitor HP ${i}`,
-        serialEquipo: `SN-${5000 + i}`,
-        fmoEquipo: `FMO-${20000 + i}`,
-    };
-});
+import { api } from "@/lib/api-client";
+
+interface PaseRecord {
+    id: string;
+    numeroPase: string;
+    fecha_emision: string;
+    solicitador?: { nombre: string, ficha: string };
+    conductor?: { nombre: string, ficha: string };
+    vehiculo?: { placa: string, modelo: string };
+    equiposPases?: any[];
+}
 
 export default function HistoryPage() {
+    const [data, setData] = useState<PaseRecord[]>([]);
+    const [loading, setLoading] = useState(true);
     const [filters, setFilters] = useState({
         numeroPase: "",
-        equipo: "", // Serial o FMO
-        persona: "", // Serial o FMO (interpretado como ficha o nombre)
+        equipo: "",
+        persona: "",
         fechaInicio: "",
         fechaFin: "",
     });
+
+    React.useEffect(() => {
+        const fetchPases = async () => {
+            try {
+                const pases = await api.get<any[]>("/pases");
+                setData(pases);
+            } catch (error) {
+                console.error("Error loading pases:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchPases();
+    }, []);
 
     const handleFilterChange = (key: string, value: string) => {
         setFilters((prev) => ({ ...prev, [key]: value }));
     };
 
     const filteredData = useMemo(() => {
-        return MOCK_DATA.filter((item) => {
+        return data.filter((item) => {
             const matchPase = filters.numeroPase
-                ? item.id.includes(filters.numeroPase)
-                : true;
-
-            const matchEquipo = filters.equipo
-                ? item.equipo.toLowerCase().includes(filters.equipo.toLowerCase()) ||
-                item.serialEquipo.toLowerCase().includes(filters.equipo.toLowerCase()) ||
-                item.fmoEquipo.toLowerCase().includes(filters.equipo.toLowerCase())
+                ? item.numeroPase.includes(filters.numeroPase)
                 : true;
 
             const matchPersona = filters.persona
-                ? item.solicitante.toLowerCase().includes(filters.persona.toLowerCase()) ||
-                item.fichaSolicitante.toLowerCase().includes(filters.persona.toLowerCase())
+                ? item.solicitador?.nombre.toLowerCase().includes(filters.persona.toLowerCase()) ||
+                  item.solicitador?.ficha.toLowerCase().includes(filters.persona.toLowerCase())
                 : true;
 
             const matchFechaInicio = filters.fechaInicio
-                ? item.fecha >= filters.fechaInicio
+                ? item.fecha_emision >= filters.fechaInicio
                 : true;
 
             const matchFechaFin = filters.fechaFin
-                ? item.fecha <= filters.fechaFin
+                ? item.fecha_emision <= filters.fechaFin
                 : true;
 
-            return matchPase && matchEquipo && matchPersona && matchFechaInicio && matchFechaFin;
+            return matchPase && matchPersona && matchFechaInicio && matchFechaFin;
         });
-    }, [filters]);
+    }, [data, filters]);
+
 
     const displayData = filteredData.slice(0, 10); // Show top 10 results
 
@@ -170,7 +178,13 @@ export default function HistoryPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {displayData.length === 0 ? (
+                                {loading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="h-24 text-center">
+                                            Cargando pases...
+                                        </TableCell>
+                                    </TableRow>
+                                ) : displayData.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={6} className="h-24 text-center">
                                             No se encontraron resultados.
@@ -179,19 +193,18 @@ export default function HistoryPage() {
                                 ) : (
                                     displayData.map((item) => (
                                         <TableRow key={item.id}>
-                                            <TableCell className="font-medium">{item.id}</TableCell>
-                                            <TableCell>{item.fecha}</TableCell>
+                                            <TableCell className="font-medium">{item.numeroPase}</TableCell>
+                                            <TableCell>{new Date(item.fecha_emision).toLocaleDateString()}</TableCell>
                                             <TableCell>
                                                 <div className="flex flex-col">
-                                                    <span className="font-medium">{item.solicitante}</span>
-                                                    <span className="text-xs text-muted-foreground">{item.fichaSolicitante}</span>
+                                                    <span className="font-medium">{item.solicitador?.nombre || 'N/A'}</span>
+                                                    <span className="text-xs text-muted-foreground">{item.solicitador?.ficha || '-'}</span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell>{item.equipo}</TableCell>
+                                            <TableCell>{item.equiposPases?.[0]?.equipo?.descripcion || 'Varios'}</TableCell>
                                             <TableCell>
                                                 <div className="flex flex-col">
-                                                    <span className="text-xs">S/N: {item.serialEquipo}</span>
-                                                    <span className="text-xs">FMO: {item.fmoEquipo}</span>
+                                                    <span className="text-xs">Vehículo: {item.vehiculo?.placa || 'N/A'}</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -200,15 +213,12 @@ export default function HistoryPage() {
                                                         <FileText className="h-4 w-4" />
                                                         <span className="sr-only">Ver Detalles</span>
                                                     </Button>
-                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                        <Pencil className="h-4 w-4" />
-                                                        <span className="sr-only">Editar</span>
-                                                    </Button>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
                                     ))
                                 )}
+
                             </TableBody>
                         </Table>
                     </CardContent>

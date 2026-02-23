@@ -31,6 +31,11 @@ interface FormData {
     despachadoPor: string;
     dirigidoA: string;
     solicitud: string;
+
+    // Authorization Info
+    autorizadoPor?: string;
+    cargoAutorizador?: string;
+    fichaAutorizador?: string;
 }
 
 interface Item {
@@ -201,15 +206,15 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     doc.line(margin, authY, margin + leftColW, authY);
 
     drawT('AUTORIZADO POR:', margin + 2, authY + 4, 6, 'bold');
-    drawT('Carmen Márquez', margin + 25, authY + 4, 8); // Name filled
+    drawT(formData.autorizadoPor || 'Carmen Márquez', margin + 25, authY + 4, 8); // Name filled
 
     drawT('CARGO:', margin + 2, authY + 10, 6, 'bold');
-    drawT('Gerente de Telemática (e)', margin + 15, authY + 10, 7);
+    drawT(formData.cargoAutorizador || 'Gerente de Telemática (e)', margin + 15, authY + 10, 7);
 
     drawT('FIRMA Y SELLO:', margin + 2, authY + 18, 6, 'bold');
 
     drawT('FICHA:', margin + 2, authY + 26, 6, 'bold');
-    drawT('15508', margin + 15, authY + 26, 8);
+    drawT(formData.fichaAutorizador || '15508', margin + 15, authY + 26, 8);
 
     doc.line(margin, authY + 28, margin + leftColW, authY + 28);
     drawT('LUGAR Y FECHA DE EMISIÓN:', margin + 2, authY + 32, 6, 'bold');

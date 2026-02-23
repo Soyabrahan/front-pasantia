@@ -1,53 +1,45 @@
-import React from "react"
-import type { Metadata } from 'next'
+"use client"
+
+import React, { useEffect } from "react"
+import { usePathname, useRouter } from "next/navigation"
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
+import { Toaster } from "sonner"
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: 'TechSupport Pro - Sistema de Gestión Industrial',
-  description: 'Sistema de gestión de pases de materiales y soporte técnico industrial',
-  generator: 'v0.app',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
-  },
-}
-
-import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar"
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
-import { Separator } from "@/components/ui/separator"
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const isAuthPage = pathname === "/login" || pathname === "/register"
+
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token")
+    if (!token && !isAuthPage) {
+      router.push("/login")
+    }
+  }, [isAuthPage, pathname, router])
+
   return (
     <html lang="en">
-      <body className={`font-sans antialiased`}>
-        <SidebarProvider>
-          <AppSidebar />
-          <SidebarInset>
-            {children}
-          </SidebarInset>
-        </SidebarProvider>
+      <body className={`font-sans antialiased text-white bg-[#0A0A0A]`}>
+        {isAuthPage ? (
+          <main>{children}</main>
+        ) : (
+          <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset className="bg-[#0A0A0A] border-l border-white/5">
+              {children}
+            </SidebarInset>
+          </SidebarProvider>
+        )}
+        <Toaster position="top-right" richColors theme="dark" />
         <Analytics />
       </body>
     </html>
