@@ -29,14 +29,14 @@ import {
   Monitor,
   Check,
   ChevronsUpDown,
-  Plus
+  Plus,
 } from "lucide-react";
 
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
 import {
   Command,
   CommandEmpty,
@@ -45,8 +45,8 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "@/components/ui/command"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 import { api } from "@/lib/api-client";
 
@@ -69,7 +69,6 @@ export default function MaterialPassPage() {
     folio: "",
     fecha: "",
     hora: "",
-
 
     // Concept Options
     conceptoOpcion: "",
@@ -153,16 +152,19 @@ export default function MaterialPassPage() {
         const lastNum = await api.get<string>("/pases/ultimo-numero");
         if (lastNum) {
           // Si por alguna razón viene como objeto { numeroPase: "..." }
-          let rawNum = typeof lastNum === 'object' && (lastNum as any).numeroPase 
-            ? (lastNum as any).numeroPase 
-            : lastNum;
-            
+          let rawNum =
+            typeof lastNum === "object" && (lastNum as any).numeroPase
+              ? (lastNum as any).numeroPase
+              : lastNum;
+
           const lastNumStr = String(rawNum);
-          
+
           // Intentar incrementar si es numérico
           const baseNum = parseInt(lastNumStr.replace(/\D/g, ""));
           if (!isNaN(baseNum)) {
-            const nextNum = (baseNum + 1).toString().padStart(lastNumStr.length, "0");
+            const nextNum = (baseNum + 1)
+              .toString()
+              .padStart(lastNumStr.length, "0");
             handleInputChange("folio", nextNum);
           } else {
             handleInputChange("folio", lastNumStr);
@@ -204,21 +206,20 @@ export default function MaterialPassPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     const getEmpleadoId = (ficha: string) => {
-      const emp = empleados.find(e => e.ficha === ficha);
+      const emp = empleados.find((e) => e.ficha === ficha);
       return emp ? emp.id : null;
     };
 
     const paseBody = {
       numeroPase: formData.folio,
       concepto: formData.conceptoOpcion,
-      destinoId: destinos.find(d => d.nombre === formData.embargueseA)?.id || null,
+      destinoId:
+        destinos.find((d) => d.nombre === formData.embargueseA)?.id || null,
       numero_compra: formData.ordenCompra,
       tipo_pago: formData.tipoPago,
       // Intentar obtener los IDs reales de los empleados vinculados
@@ -227,11 +228,14 @@ export default function MaterialPassPage() {
       despachadorId: getEmpleadoId(formData.fichaDespachador),
       autorizadorId: getEmpleadoId("15508"), // Carmen Marquez
       vehiculoId: formData.vehiculoFMO ? parseInt(formData.vehiculoFMO) : null,
-      equipos: items.map(item => ({
+      equipos: items.map((item) => ({
         descripcion: item.descripcion,
-        cantidad: typeof item.cantidad === 'string' ? parseInt(item.cantidad) : item.cantidad,
-        unidad: item.unidad
-      }))
+        cantidad:
+          typeof item.cantidad === "string"
+            ? parseInt(item.cantidad)
+            : item.cantidad,
+        unidad: item.unidad,
+      })),
     };
 
     try {
@@ -273,7 +277,10 @@ export default function MaterialPassPage() {
 
       setIsSubmitted(true);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Error desconocido al registrar el pase";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Error desconocido al registrar el pase";
       alert(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -303,6 +310,9 @@ export default function MaterialPassPage() {
       fichaDespachador: "",
       cargoDespachador: "",
       departamentoDespachador: "",
+      autorizadoPor: "Carmen Marquez",
+      cargoAutorizador: "Gerente de Telemática (e)",
+      fichaAutorizador: "15508",
       observaciones: "",
     });
     setItems([]);
@@ -368,7 +378,6 @@ export default function MaterialPassPage() {
 
       <main className="max-w-5xl mx-auto px-4 space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-
           {/* Concept Options */}
           <Card>
             <CardHeader className="pb-3 border-b">
@@ -378,7 +387,9 @@ export default function MaterialPassPage() {
                   Concepto del Pase
                 </div>
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="folio-input" className="text-sm font-medium">N° Pase:</Label>
+                  <Label htmlFor="folio-input" className="text-sm font-medium">
+                    N° Pase:
+                  </Label>
                   <Input
                     id="folio-input"
                     className="h-8 w-32 border-slate-400 font-mono"
@@ -391,10 +402,20 @@ export default function MaterialPassPage() {
             <CardContent className="pt-6">
               <RadioGroup
                 value={formData.conceptoOpcion}
-                onValueChange={(val) => handleInputChange("conceptoOpcion", val)}
+                onValueChange={(val) =>
+                  handleInputChange("conceptoOpcion", val)
+                }
                 className="grid grid-cols-2 md:grid-cols-4 gap-4"
               >
-                {["DONACION", "DEVOLUCION", "PRESTAMO", "REPARACION", "REVISION", "VENDIDO", "FORANEO"].map((opcion) => (
+                {[
+                  "DONACION",
+                  "DEVOLUCION",
+                  "PRESTAMO",
+                  "REPARACION",
+                  "REVISION",
+                  "VENDIDO",
+                  "FORANEO",
+                ].map((opcion) => (
                   <label
                     key={opcion}
                     htmlFor={opcion}
@@ -405,7 +426,9 @@ export default function MaterialPassPage() {
                       id={opcion}
                       className="border-slate-600 text-primary w-5 h-5 transition-none duration-0"
                     />
-                    <span className="font-medium text-base text-foreground">{opcion}</span>
+                    <span className="font-medium text-base text-foreground">
+                      {opcion}
+                    </span>
                   </label>
                 ))}
               </RadioGroup>
@@ -415,7 +438,9 @@ export default function MaterialPassPage() {
                   className="mt-2 border-slate-600"
                   placeholder="Ej. 3 días, 1 semana, Indefinido..."
                   value={formData.tiempoEstimado}
-                  onChange={(e) => handleInputChange("tiempoEstimado", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("tiempoEstimado", e.target.value)
+                  }
                 />
               </div>
             </CardContent>
@@ -440,7 +465,8 @@ export default function MaterialPassPage() {
                       aria-expanded={openDestino}
                       className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
                     >
-                      {formData.embargueseA || "Seleccionar o escribir destino..."}
+                      {formData.embargueseA ||
+                        "Seleccionar o escribir destino..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -449,16 +475,18 @@ export default function MaterialPassPage() {
                       <CommandInput placeholder="Buscar destino..." />
                       <CommandList>
                         <CommandEmpty className="p-2">
-                          <p className="text-sm mb-2">No se encontró el destino.</p>
+                          <p className="text-sm mb-2">
+                            No se encontró el destino.
+                          </p>
                           <Button
                             size="sm"
                             variant="secondary"
                             className="w-full gap-2"
                             onClick={() => {
-                              handleInputChange("embargueseA", "")
-                              handleInputChange("direccion", "")
-                              handleInputChange("telefono", "")
-                              setOpenDestino(false)
+                              handleInputChange("embargueseA", "");
+                              handleInputChange("direccion", "");
+                              handleInputChange("telefono", "");
+                              setOpenDestino(false);
                             }}
                           >
                             <Plus className="h-4 w-4" />
@@ -467,28 +495,43 @@ export default function MaterialPassPage() {
                         </CommandEmpty>
                         <CommandGroup heading="Destinos Registrados">
                           {loadingDestinos ? (
-                            <div className="p-4 text-center text-sm text-muted-foreground">Cargando destinos...</div>
+                            <div className="p-4 text-center text-sm text-muted-foreground">
+                              Cargando destinos...
+                            </div>
                           ) : (
                             destinos.map((destino) => (
                               <CommandItem
                                 key={destino.id}
                                 value={destino.nombre}
                                 onSelect={() => {
-                                  handleInputChange("embargueseA", destino.nombre)
-                                  handleInputChange("direccion", destino.direccion)
-                                  handleInputChange("telefono", destino.telefono)
-                                  setOpenDestino(false)
+                                  handleInputChange(
+                                    "embargueseA",
+                                    destino.nombre,
+                                  );
+                                  handleInputChange(
+                                    "direccion",
+                                    destino.direccion,
+                                  );
+                                  handleInputChange(
+                                    "telefono",
+                                    destino.telefono,
+                                  );
+                                  setOpenDestino(false);
                                 }}
                               >
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    formData.embargueseA === destino.nombre ? "opacity-100" : "opacity-0"
+                                    formData.embargueseA === destino.nombre
+                                      ? "opacity-100"
+                                      : "opacity-0",
                                   )}
                                 />
                                 <div className="flex flex-col">
                                   <span>{destino.nombre}</span>
-                                  <span className="text-xs text-muted-foreground truncate max-w-[300px]">{destino.direccion}</span>
+                                  <span className="text-xs text-muted-foreground truncate max-w-[300px]">
+                                    {destino.direccion}
+                                  </span>
                                 </div>
                               </CommandItem>
                             ))
@@ -498,10 +541,10 @@ export default function MaterialPassPage() {
                         <CommandGroup>
                           <CommandItem
                             onSelect={() => {
-                              handleInputChange("embargueseA", "")
-                              handleInputChange("direccion", "")
-                              handleInputChange("telefono", "")
-                              setOpenDestino(false)
+                              handleInputChange("embargueseA", "");
+                              handleInputChange("direccion", "");
+                              handleInputChange("telefono", "");
+                              setOpenDestino(false);
                             }}
                             className="text-primary font-medium"
                           >
@@ -518,7 +561,9 @@ export default function MaterialPassPage() {
                   className="mt-2 border-slate-400"
                   placeholder="Escriba aquí para especificar manualmente..."
                   value={formData.embargueseA}
-                  onChange={(e) => handleInputChange("embargueseA", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("embargueseA", e.target.value)
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -526,7 +571,9 @@ export default function MaterialPassPage() {
                 <Input
                   className="border-slate-400"
                   value={formData.ordenCompra}
-                  onChange={(e) => handleInputChange("ordenCompra", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("ordenCompra", e.target.value)
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -535,7 +582,9 @@ export default function MaterialPassPage() {
                   type="tel"
                   className="border-slate-400"
                   value={formData.telefono}
-                  onChange={(e) => handleInputChange("telefono", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("telefono", e.target.value)
+                  }
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
@@ -543,7 +592,9 @@ export default function MaterialPassPage() {
                 <Input
                   className="border-slate-400"
                   value={formData.direccion}
-                  onChange={(e) => handleInputChange("direccion", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("direccion", e.target.value)
+                  }
                 />
               </div>
               <div className="md:col-span-2 pt-2">
@@ -557,14 +608,22 @@ export default function MaterialPassPage() {
                     className="flex items-center space-x-2 cursor-pointer"
                     htmlFor="contado"
                   >
-                    <RadioGroupItem value="CONTADO" id="contado" className="border-slate-500 w-5 h-5 transition-none duration-0" />
+                    <RadioGroupItem
+                      value="CONTADO"
+                      id="contado"
+                      className="border-slate-500 w-5 h-5 transition-none duration-0"
+                    />
                     <span className="text-base font-medium">Contado</span>
                   </label>
                   <label
                     className="flex items-center space-x-2 cursor-pointer"
                     htmlFor="credito"
                   >
-                    <RadioGroupItem value="CREDITO" id="credito" className="border-slate-500 w-5 h-5 transition-none duration-0" />
+                    <RadioGroupItem
+                      value="CREDITO"
+                      id="credito"
+                      className="border-slate-500 w-5 h-5 transition-none duration-0"
+                    />
                     <span className="text-base font-medium">Crédito</span>
                   </label>
                 </RadioGroup>
@@ -591,7 +650,8 @@ export default function MaterialPassPage() {
                       aria-expanded={openConductor}
                       className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
                     >
-                      {formData.conductor || "Seleccionar o escribir conductor..."}
+                      {formData.conductor ||
+                        "Seleccionar o escribir conductor..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -599,38 +659,52 @@ export default function MaterialPassPage() {
                     <Command>
                       <CommandInput placeholder="Buscar conductor por nombre o ficha..." />
                       <CommandList>
-                        <CommandEmpty className="p-2 text-sm">No se encontró el conductor.</CommandEmpty>
+                        <CommandEmpty className="p-2 text-sm">
+                          No se encontró el conductor.
+                        </CommandEmpty>
                         <CommandGroup heading="Conductores Registrados">
-                          {empleados.filter(e => e.rol === "Conductor").map((empleado) => (
-                            <CommandItem
-                              key={empleado.id}
-                              value={`${empleado.nombre} ${empleado.ficha}`}
-                              onSelect={() => {
-                                handleInputChange("conductor", empleado.nombre)
-                                handleInputChange("fichaConductor", empleado.ficha)
-                                setOpenConductor(false)
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  formData.conductor === empleado.nombre ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              <div className="flex flex-col">
-                                <span>{empleado.nombre}</span>
-                                <span className="text-xs text-muted-foreground">Ficha: {empleado.ficha}</span>
-                              </div>
-                            </CommandItem>
-                          ))}
+                          {empleados
+                            .filter((e) => e.rol === "Conductor")
+                            .map((empleado) => (
+                              <CommandItem
+                                key={empleado.id}
+                                value={`${empleado.nombre} ${empleado.ficha}`}
+                                onSelect={() => {
+                                  handleInputChange(
+                                    "conductor",
+                                    empleado.nombre,
+                                  );
+                                  handleInputChange(
+                                    "fichaConductor",
+                                    empleado.ficha,
+                                  );
+                                  setOpenConductor(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.conductor === empleado.nombre
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span>{empleado.nombre}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    Ficha: {empleado.ficha}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
                         </CommandGroup>
                         <CommandSeparator />
                         <CommandGroup>
                           <CommandItem
                             onSelect={() => {
-                              handleInputChange("conductor", "")
-                              handleInputChange("fichaConductor", "")
-                              setOpenConductor(false)
+                              handleInputChange("conductor", "");
+                              handleInputChange("fichaConductor", "");
+                              setOpenConductor(false);
                             }}
                             className="text-primary font-medium"
                           >
@@ -646,7 +720,9 @@ export default function MaterialPassPage() {
                   className="mt-2 border-slate-400"
                   placeholder="Escriba aquí si es externo..."
                   value={formData.conductor}
-                  onChange={(e) => handleInputChange("conductor", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("conductor", e.target.value)
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -654,7 +730,9 @@ export default function MaterialPassPage() {
                 <Input
                   className="border-slate-400"
                   value={formData.fichaConductor}
-                  onChange={(e) => handleInputChange("fichaConductor", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("fichaConductor", e.target.value)
+                  }
                 />
               </div>
               <div className="md:col-span-2 pt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -664,12 +742,17 @@ export default function MaterialPassPage() {
                     className="border-slate-400"
                     placeholder="Se llenará automáticamente o escriba..."
                     value={formData.vehiculoFMO as string}
-                    onChange={(e) => handleInputChange("vehiculoFMO", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("vehiculoFMO", e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Vehículo Particular</Label>
-                  <Popover open={openVehiculoParticular} onOpenChange={setOpenVehiculoParticular}>
+                  <Popover
+                    open={openVehiculoParticular}
+                    onOpenChange={setOpenVehiculoParticular}
+                  >
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -677,7 +760,8 @@ export default function MaterialPassPage() {
                         aria-expanded={openVehiculoParticular}
                         className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
                       >
-                        {formData.vehiculoParticular || "Elegir vehículo particular..."}
+                        {formData.vehiculoParticular ||
+                          "Elegir vehículo particular..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
@@ -693,16 +777,29 @@ export default function MaterialPassPage() {
                                 value={v.placa || v.fmo}
                                 onSelect={() => {
                                   if (v.esFMO) {
-                                    handleInputChange("vehiculoParticular", v.placa || "")
-                                    handleInputChange("vehiculoFMO", v.fmo)
+                                    handleInputChange(
+                                      "vehiculoParticular",
+                                      v.placa || "",
+                                    );
+                                    handleInputChange("vehiculoFMO", v.fmo);
                                   } else {
-                                    handleInputChange("vehiculoParticular", v.placa)
-                                    handleInputChange("vehiculoFMO", "")
+                                    handleInputChange(
+                                      "vehiculoParticular",
+                                      v.placa,
+                                    );
+                                    handleInputChange("vehiculoFMO", "");
                                   }
-                                  setOpenVehiculoParticular(false)
+                                  setOpenVehiculoParticular(false);
                                 }}
                               >
-                                <Check className={cn("mr-2 h-4 w-4", formData.vehiculoParticular === v.placa ? "opacity-100" : "opacity-0")} />
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.vehiculoParticular === v.placa
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
                                 {v.placa} {v.esFMO ? `(FMO: ${v.fmo})` : ""}
                               </CommandItem>
                             ))}
@@ -715,7 +812,9 @@ export default function MaterialPassPage() {
                     className="mt-2 border-slate-400"
                     placeholder="Marca, Modelo o Placa..."
                     value={formData.vehiculoParticular as string}
-                    onChange={(e) => handleInputChange("vehiculoParticular", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("vehiculoParticular", e.target.value)
+                    }
                   />
                 </div>
               </div>
@@ -741,7 +840,8 @@ export default function MaterialPassPage() {
                       aria-expanded={openEmpleado}
                       className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
                     >
-                      {formData.despachadoPor || "Seleccionar o escribir empleado..."}
+                      {formData.despachadoPor ||
+                        "Seleccionar o escribir empleado..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -749,48 +849,68 @@ export default function MaterialPassPage() {
                     <Command>
                       <CommandInput placeholder="Buscar empleado por nombre o ficha..." />
                       <CommandList>
-                        <CommandEmpty className="p-2 text-sm">No se encontró el empleado.</CommandEmpty>
+                        <CommandEmpty className="p-2 text-sm">
+                          No se encontró el empleado.
+                        </CommandEmpty>
                         <CommandGroup heading="Empleados Registrados">
                           {loadingEmpleados ? (
-                            <div className="p-4 text-center text-sm text-muted-foreground">Cargando empleados...</div>
+                            <div className="p-4 text-center text-sm text-muted-foreground">
+                              Cargando empleados...
+                            </div>
                           ) : (
-                            empleados.filter(e => e.rol === "Despachador").map((empleado) => (
-                              <CommandItem
-                                key={empleado.id}
-                                value={`${empleado.nombre} ${empleado.ficha}`}
-                                onSelect={() => {
-                                  handleInputChange("despachadoPor", empleado.nombre)
-                                  handleInputChange("fichaDespachador", empleado.ficha)
-                                  handleInputChange("cargoDespachador", empleado.cargo)
-                                  handleInputChange("departamentoDespachador", empleado.departamento)
-                                  setOpenEmpleado(false)
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    formData.despachadoPor === empleado.nombre ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <div className="flex flex-col">
-                                  <span>{empleado.nombre}</span>
-                                  <span className="text-xs text-muted-foreground">
-                                    Ficha: {empleado.ficha} | {empleado.cargo}
-                                  </span>
-                                </div>
-                              </CommandItem>
-                            ))
+                            empleados
+                              .filter((e) => e.rol === "Despachador")
+                              .map((empleado) => (
+                                <CommandItem
+                                  key={empleado.id}
+                                  value={`${empleado.nombre} ${empleado.ficha}`}
+                                  onSelect={() => {
+                                    handleInputChange(
+                                      "despachadoPor",
+                                      empleado.nombre,
+                                    );
+                                    handleInputChange(
+                                      "fichaDespachador",
+                                      empleado.ficha,
+                                    );
+                                    handleInputChange(
+                                      "cargoDespachador",
+                                      empleado.cargo,
+                                    );
+                                    handleInputChange(
+                                      "departamentoDespachador",
+                                      empleado.departamento,
+                                    );
+                                    setOpenEmpleado(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formData.despachadoPor === empleado.nombre
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span>{empleado.nombre}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      Ficha: {empleado.ficha} | {empleado.cargo}
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))
                           )}
                         </CommandGroup>
                         <CommandSeparator />
                         <CommandGroup>
                           <CommandItem
                             onSelect={() => {
-                              handleInputChange("despachadoPor", "")
-                              handleInputChange("fichaDespachador", "")
-                              handleInputChange("cargoDespachador", "")
-                              handleInputChange("departamentoDespachador", "")
-                              setOpenEmpleado(false)
+                              handleInputChange("despachadoPor", "");
+                              handleInputChange("fichaDespachador", "");
+                              handleInputChange("cargoDespachador", "");
+                              handleInputChange("departamentoDespachador", "");
+                              setOpenEmpleado(false);
                             }}
                             className="text-primary font-medium"
                           >
@@ -807,7 +927,9 @@ export default function MaterialPassPage() {
                   className="mt-2 border-slate-400"
                   placeholder="Nombre manualmente..."
                   value={formData.despachadoPor}
-                  onChange={(e) => handleInputChange("despachadoPor", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("despachadoPor", e.target.value)
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -815,7 +937,9 @@ export default function MaterialPassPage() {
                 <Input
                   className="border-slate-400"
                   value={formData.fichaDespachador}
-                  onChange={(e) => handleInputChange("fichaDespachador", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("fichaDespachador", e.target.value)
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -823,7 +947,9 @@ export default function MaterialPassPage() {
                 <Input
                   className="border-slate-400"
                   value={formData.cargoDespachador}
-                  onChange={(e) => handleInputChange("cargoDespachador", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("cargoDespachador", e.target.value)
+                  }
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
@@ -831,7 +957,9 @@ export default function MaterialPassPage() {
                 <Input
                   className="border-slate-400"
                   value={formData.departamentoDespachador}
-                  onChange={(e) => handleInputChange("departamentoDespachador", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("departamentoDespachador", e.target.value)
+                  }
                 />
               </div>
             </CardContent>
@@ -852,7 +980,9 @@ export default function MaterialPassPage() {
                   className="min-h-[100px] border-slate-400"
                   placeholder="Ej: LEIDA AYALA f-12197 / CPU FMO-119548"
                   value={formData.observaciones}
-                  onChange={(e) => handleInputChange("observaciones", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("observaciones", e.target.value)
+                  }
                 />
 
                 {/* Detected Tags */}
@@ -886,27 +1016,39 @@ export default function MaterialPassPage() {
             </CardHeader>
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground uppercase">Autorizado Por</Label>
-                <Input 
+                <Label className="text-xs text-muted-foreground uppercase">
+                  Autorizado Por
+                </Label>
+                <Input
                   className="border-slate-400 font-medium h-8"
                   value={formData.autorizadoPor}
-                  onChange={(e) => handleInputChange("autorizadoPor", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("autorizadoPor", e.target.value)
+                  }
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground uppercase">Cargo</Label>
-                <Input 
+                <Label className="text-xs text-muted-foreground uppercase">
+                  Cargo
+                </Label>
+                <Input
                   className="border-slate-400 h-8"
                   value={formData.cargoAutorizador}
-                  onChange={(e) => handleInputChange("cargoAutorizador", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("cargoAutorizador", e.target.value)
+                  }
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground uppercase">Ficha</Label>
-                <Input 
+                <Label className="text-xs text-muted-foreground uppercase">
+                  Ficha
+                </Label>
+                <Input
                   className="border-slate-400 h-8 font-medium"
                   value={formData.fichaAutorizador}
-                  onChange={(e) => handleInputChange("fichaAutorizador", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("fichaAutorizador", e.target.value)
+                  }
                 />
               </div>
             </CardContent>
@@ -930,11 +1072,7 @@ export default function MaterialPassPage() {
               <RotateCcw className="h-4 w-4 mr-2" />
               Limpiar Formulario
             </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="h-11 px-8"
-            >
+            <Button type="submit" disabled={isSubmitting} className="h-11 px-8">
               {isSubmitting ? (
                 <>
                   <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
