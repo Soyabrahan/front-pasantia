@@ -87,7 +87,7 @@ export default function ConfigurationPage() {
     const [isAddingDestino, setIsAddingDestino] = useState(false)
     const [isAddingEmpleado, setIsAddingEmpleado] = useState(false)
 
-    const [newUsuario, setNewUsuario] = useState({ ficha: "", nombre: "", rol: "Usuario", contrasena: "" })
+    const [newUsuario, setNewUsuario] = useState({ ficha: "", nombre: "", rol: "Administrador", contrasena: "admin" })
     const [newVehiculo, setNewVehiculo] = useState({ placa: "", modelo: "", tipo: "", esFMO: false, fmo: "" })
     const [newDestino, setNewDestino] = useState({ nombre: "", direccion: "", telefono: "" })
     const [newEmpleado, setNewEmpleado] = useState({ ficha: "", nombre: "", departamento: "", cargo: "" })
@@ -144,7 +144,7 @@ export default function ConfigurationPage() {
             const saved = await api.post<any>("/usuarios", newUsuario)
             setUsuarios([...usuarios, saved])
             setIsAddingUsuario(false)
-            setNewUsuario({ ficha: "", nombre: "", rol: "Usuario", contrasena: "" })
+            setNewUsuario({ ficha: "", nombre: "", rol: "Administrador", contrasena: "admin" })
         } catch (error: any) {
             if (error.status === 409) {
                 alert("Error: Esta ficha ya tiene una cuenta de sistema asignada.")
@@ -510,22 +510,10 @@ export default function ConfigurationPage() {
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell>
-                                                                <Select 
-                                                                    value={newUsuario.rol} 
-                                                                    onValueChange={(val) => setNewUsuario({
-                                                                        ...newUsuario, 
-                                                                        rol: val,
-                                                                        contrasena: val === 'Administrador' ? 'admin' : '0000'
-                                                                    })}
-                                                                >
-                                                                    <SelectTrigger className="h-8 text-xs">
-                                                                        <SelectValue placeholder="Rol..." />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        <SelectItem value="Usuario">Usuario</SelectItem>
-                                                                        <SelectItem value="Administrador">Administrador</SelectItem>
-                                                                    </SelectContent>
-                                                                </Select>
+                                                                <div className="flex items-center gap-2 text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full w-fit">
+                                                                    <ShieldCheck className="h-3 w-3" />
+                                                                    Administrador
+                                                                </div>
                                                             </TableCell>
                                                         <TableCell className="text-right">
                                                             <div className="flex justify-end gap-2">
@@ -534,7 +522,7 @@ export default function ConfigurationPage() {
                                                                 </Button>
                                                                 <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => {
                                                                     setIsAddingUsuario(false)
-                                                                    setNewUsuario({ ficha: "", nombre: "", rol: "Usuario", contrasena: "" })
+                                                                    setNewUsuario({ ficha: "", nombre: "", rol: "Administrador", contrasena: "admin" })
                                                                 }}>
                                                                     <X className="h-4 w-4" />
                                                                 </Button>

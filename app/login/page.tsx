@@ -156,15 +156,15 @@ export default function LoginPage() {
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-white">
               <ShieldCheck className="h-4 w-4" />
-              Secure Access
+              ACESSO SEGURO
             </div>
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-white">
               <Truck className="h-4 w-4" />
-              Industrial Ready
+              CVG FERROMINERA ORINOCO
             </div>
           </div>
           <p className="text-[9px] text-white font-medium uppercase tracking-[0.3em]">
-            © 2024 FMO - Gestión de Materiales y Misceláneos
+            © 2026 FMO - Gestión de Materiales y Misceláneos
           </p>
         </div>
       </div>

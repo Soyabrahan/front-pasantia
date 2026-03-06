@@ -17,6 +17,8 @@ import { Search, Filter, Calendar as CalendarIcon, FileText, Pencil, History } f
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
 import { api } from "@/lib/api-client";
+import { toast } from "sonner";
+
 
 interface PaseRecord {
     id: string;
@@ -79,6 +81,63 @@ export default function HistoryPage() {
             return matchPase && matchPersona && matchFechaInicio && matchFechaFin;
         });
     }, [data, filters]);
+
+    const handleDownloadPDF = async (id: string) => {
+        try {
+            const pase = await api.get<any>(`/pases/${id}`);
+            
+            if (!pase) {
+                toast.error("No se encontró la información del pase");
+                return;
+            }
+
+            const pdfData = {
+                numeroPase: pase.numeroPase,
+                concepto: {
+                    donacion: pase.concepto === "DONACION",
+                    devolucion: pase.concepto === "DEVOLUCION",
+                    prestamo: pase.concepto === "PRESTAMO",
+                    reparacion: pase.concepto === "REPARACION",
+                    revision: pase.concepto === "REVISION",
+                    vendido: pase.concepto === "VENDIDO",
+                    foraneo: pase.concepto === "FORANEO",
+                },
+                embarqueseA: pase.destino?.nombre || "",
+                ordenCompra: pase.numero_compra || "",
+                direccion: pase.destino?.direccion || "",
+                telefono: pase.destino?.telefono || "",
+                contado: pase.tipo_pago === "CONTADO",
+                credito: pase.tipo_pago === "CREDITO",
+                conductor: pase.conductor?.nombre || "",
+                fichaConductor: pase.conductor?.ficha || "",
+                vehiculoFmo: pase.vehiculo?.fmo || "",
+                vehiculoParticular: pase.vehiculo?.placa || "",
+                departamento: pase.despachador?.departamento || "",
+                cargo: pase.despachador?.cargo || "",
+                fichaDespachador: pase.despachador?.ficha || "",
+                despachadoPor: pase.despachador?.nombre || "",
+                dirigidoA: pase.observaciones || "",
+                solicitud: "",
+                autorizadoPor: pase.autorizador?.nombre,
+                cargoAutorizador: pase.autorizador?.cargo,
+                fichaAutorizador: pase.autorizador?.ficha,
+            };
+
+            const items = (pase.equiposPases || []).map((ep: any) => ({
+                cantidad: ep.cantidad,
+                unidad: ep.equipo?.unidad || "UND",
+                descripcion: ep.equipo?.descripcion || "",
+            }));
+
+            const { generatePDF } = await import("@/lib/generatePdf");
+            generatePDF(pdfData, items);
+            toast.success("PDF generado correctamente");
+        } catch (error) {
+            console.error("Error generating PDF:", error);
+            toast.error("Error al generar el PDF");
+        }
+    };
+
 
 
     const displayData = filteredData.slice(0, 10); // Show top 10 results
@@ -209,9 +268,14 @@ export default function HistoryPage() {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="h-8 w-8 p-0"
+                                                        onClick={() => handleDownloadPDF(item.id)}
+                                                    >
                                                         <FileText className="h-4 w-4" />
-                                                        <span className="sr-only">Ver Detalles</span>
+                                                        <span className="sr-only">Descargar PDF</span>
                                                     </Button>
                                                 </div>
                                             </TableCell>
