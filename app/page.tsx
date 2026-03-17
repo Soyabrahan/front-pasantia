@@ -46,6 +46,13 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 import { api } from "@/lib/api-client";
@@ -100,6 +107,13 @@ export default function MaterialPassPage() {
 
     // Observations / Request
     observaciones: "",
+    solicitud: "",
+
+    // Applicant Info
+    solicitante: "",
+    fichaSolicitante: "",
+    cargoSolicitante: "",
+    departamentoSolicitante: "",
   });
 
   React.useEffect(() => {
@@ -235,6 +249,7 @@ export default function MaterialPassPage() {
             ? parseInt(item.cantidad)
             : item.cantidad,
         unidad: item.unidad,
+        fmos: item.fmos.split(',').map(f => f.trim()).filter(f => f !== ""),
       })),
     };
 
@@ -255,6 +270,7 @@ export default function MaterialPassPage() {
           foraneo: formData.conceptoOpcion === "FORANEO",
         },
         embarqueseA: formData.embargueseA,
+        tiempoEstimado: formData.tiempoEstimado,
         ordenCompra: formData.ordenCompra,
         direccion: formData.direccion,
         telefono: formData.telefono,
@@ -269,7 +285,12 @@ export default function MaterialPassPage() {
         fichaDespachador: formData.fichaDespachador,
         despachadoPor: formData.despachadoPor,
         dirigidoA: formData.observaciones,
-        solicitud: "",
+        solicitud: formData.solicitud,
+        conceptoNombre: formData.conceptoOpcion,
+        solicitante: formData.solicitante,
+        fichaSolicitante: formData.fichaSolicitante,
+        cargoSolicitante: formData.cargoSolicitante,
+        departamentoSolicitante: formData.departamentoSolicitante,
       };
 
       const { generatePDF } = await import("@/lib/generatePdf");
@@ -314,6 +335,11 @@ export default function MaterialPassPage() {
       cargoAutorizador: "Gerente de Telemática (e)",
       fichaAutorizador: "15508",
       observaciones: "",
+      solicitud: "",
+      solicitante: "",
+      fichaSolicitante: "",
+      cargoSolicitante: "",
+      departamentoSolicitante: "",
     });
     setItems([]);
     setIsSubmitted(false);
@@ -965,6 +991,102 @@ export default function MaterialPassPage() {
             </CardContent>
           </Card>
 
+          {/* Applicant Info */}
+          <Card className="border-slate-300">
+            <CardHeader className="pb-3 border-b border-slate-300">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-primary" />
+                Datos del Solicitante
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nombre del Solicitante</Label>
+                <div className="flex flex-col gap-2">
+                  <Popover open={openEmpleado} onOpenChange={setOpenEmpleado}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openEmpleado}
+                        className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
+                      >
+                        {formData.solicitante || "Seleccionar solicitante..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar por nombre o ficha..." />
+                        <CommandList>
+                          <CommandEmpty>No se encontró el empleado.</CommandEmpty>
+                          <CommandGroup heading="Empleados Registrados">
+                            {empleados.map((empleado) => (
+                              <CommandItem
+                                key={empleado.id}
+                                value={`${empleado.nombre} ${empleado.ficha}`}
+                                onSelect={() => {
+                                  handleInputChange("solicitante", empleado.nombre);
+                                  handleInputChange("fichaSolicitante", empleado.ficha);
+                                  handleInputChange("cargoSolicitante", empleado.cargo);
+                                  handleInputChange("departamentoSolicitante", empleado.departamento);
+                                  setOpenEmpleado(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.solicitante === empleado.nombre ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span>{empleado.nombre}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    F- {empleado.ficha} | {empleado.cargo}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <Input
+                    className="border-slate-400"
+                    placeholder="Nombre manualmente..."
+                    value={formData.solicitante}
+                    onChange={(e) => handleInputChange("solicitante", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Ficha</Label>
+                <Input
+                  className="border-slate-400"
+                  value={formData.fichaSolicitante}
+                  onChange={(e) => handleInputChange("fichaSolicitante", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Cargo</Label>
+                <Input
+                  className="border-slate-400"
+                  value={formData.cargoSolicitante}
+                  onChange={(e) => handleInputChange("cargoSolicitante", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Departamento</Label>
+                <Input
+                  className="border-slate-400"
+                  value={formData.departamentoSolicitante}
+                  onChange={(e) => handleInputChange("departamentoSolicitante", e.target.value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Observations & Others */}
           <Card className="border-slate-300">
             <CardHeader className="pb-3 border-b border-slate-300">
@@ -975,15 +1097,41 @@ export default function MaterialPassPage() {
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
               <div className="space-y-2">
-                <Label>Observaciones, Dirigido a, Solicitud:</Label>
+                <Label>Observaciones / Dirigido A:</Label>
                 <Textarea
-                  className="min-h-[100px] border-slate-400"
-                  placeholder="Ej: LEIDA AYALA f-12197 / CPU FMO-119548"
+                  className="min-h-[60px] border-slate-400"
+                  placeholder="Ej: ATENCION LEIDA AYALA"
                   value={formData.observaciones}
                   onChange={(e) =>
                     handleInputChange("observaciones", e.target.value)
                   }
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Solicitud (Motivo):</Label>
+                <Select
+                  value={formData.solicitud}
+                  onValueChange={(val) => handleInputChange("solicitud", val)}
+                >
+                  <SelectTrigger className="border-slate-400">
+                    <SelectValue placeholder="Seleccione el motivo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      "DONACION",
+                      "DEVOLUCION",
+                      "PRESTAMO",
+                      "REPARACION",
+                      "REVISION",
+                      "VENDIDO",
+                      "FORANEO",
+                    ].map((opcion) => (
+                      <SelectItem key={opcion} value={opcion}>
+                        {opcion}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
                 {/* Detected Tags */}
                 {(extractedData.ficha || extractedData.fmo) && (

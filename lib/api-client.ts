@@ -1,8 +1,8 @@
 // Definimos la prioridad de las URLs
-const API_BASE_URL = 
-  process.env.NEXT_PUBLIC_API_URL_REMOTE || 
-  process.env.NEXT_PUBLIC_API_URL_LOCAL || 
-  "http://localhost:3001";
+const API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_URL_REMOTE ||
+    process.env.NEXT_PUBLIC_API_URL_LOCAL ||
+    "http://localhost:3001";
 
 interface RequestOptions extends RequestInit {
     params?: Record<string, string>;

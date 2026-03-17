@@ -9,6 +9,7 @@ export interface MaterialItem {
   cantidad: string
   unidad: string
   descripcion: string
+  fmos: string // Comma-separated FMOs/Serials
 }
 
 
@@ -22,10 +23,11 @@ const UNIDADES = ["Pza", "Und", "Mt", "Kg", "Caja", "Rollo"]
 export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
   const addItem = () => {
     const newItem: MaterialItem = {
-      id: crypto.randomUUID(),
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 11),
       cantidad: "",
       unidad: "Und",
       descripcion: "",
+      fmos: "",
     }
     onItemsChange([...items, newItem])
   }
@@ -69,8 +71,11 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
           <div className="col-span-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Unidad
           </div>
-          <div className="col-span-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Descripción (Marca/Serial)
+          <div className="col-span-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Descripción (Producto)
+          </div>
+          <div className="col-span-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            FMOs / Seriales
           </div>
           <div className="col-span-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">
 
@@ -115,12 +120,20 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
                     ))}
                   </select>
                 </div>
-                <div className="col-span-5">
+                <div className="col-span-3">
                   <Input
-                    placeholder="Marca, serial, detalles..."
+                    placeholder="Marca, detalles..."
                     value={item.descripcion}
                     onChange={(e) => updateItem(item.id, "descripcion", e.target.value)}
                     className="h-9 border-slate-400"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Input
+                    placeholder="FMO-1, FMO-2..."
+                    value={item.fmos}
+                    onChange={(e) => updateItem(item.id, "fmos", e.target.value)}
+                    className="h-9 border-slate-400 font-mono text-xs"
                   />
                 </div>
                 <div className="col-span-1 text-center">
