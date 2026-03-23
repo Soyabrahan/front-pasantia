@@ -140,6 +140,7 @@ export default function HistoryPage() {
 
 
 
+
     const displayData = filteredData.slice(0, 10); // Show top 10 results
 
     return (
@@ -147,7 +148,7 @@ export default function HistoryPage() {
             {/* Header / Letterhead */}
             <header className="bg-primary text-primary-foreground shadow-lg mb-8">
                 <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-4">
-                    <SidebarTrigger className="text-primary-foreground hover:bg-primary-foreground/10" />
+
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center">
                             <History className="h-6 w-6" />
@@ -260,11 +261,27 @@ export default function HistoryPage() {
                                                     <span className="text-xs text-muted-foreground">{item.solicitador?.ficha || '-'}</span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell>{item.equiposPases?.[0]?.equipo?.descripcion || 'Varios'}</TableCell>
                                             <TableCell>
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs">Vehículo: {item.vehiculo?.placa || 'N/A'}</span>
-                                                </div>
+                                                {item.equiposPases && item.equiposPases.length > 0 ? (
+                                                    item.equiposPases.length === 1 ? (
+                                                        [item.equiposPases[0].equipo?.marca, item.equiposPases[0].equipo?.modelo].filter(Boolean).join(" ") || "N/A"
+                                                    ) : (
+                                                        "Varios"
+                                                    )
+                                                ) : (
+                                                    "N/A"
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {item.equiposPases && item.equiposPases.length > 0 ? (
+                                                    item.equiposPases.length === 1 ? (
+                                                        item.equiposPases[0].equipo?.fmo || "N/A"
+                                                    ) : (
+                                                        "Varios"
+                                                    )
+                                                ) : (
+                                                    "N/A"
+                                                )}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">

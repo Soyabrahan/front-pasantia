@@ -312,7 +312,9 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT(formData.fichaAutorizador || '15508', margin + 12, authY + 28, 8, 'bold');
 
     drawT('LUGAR Y FECHA DE EMISIÓN:', margin + 1.5, authY + 34, 5.5, 'bold');
-    drawT('PUERTO ORDAZ, 18-02-2026', margin + 35, authY + 34, 6.5, 'bold');
+    const today = new Date();
+    const formattedDate = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
+    drawT(`PUERTO ORDAZ, ${formattedDate}`, margin + 35, authY + 34, 6.5, 'bold');
 
     // ============================================
     // BOTTOM SECTION (Table + Proteccion)

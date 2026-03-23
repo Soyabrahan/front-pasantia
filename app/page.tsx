@@ -11,7 +11,7 @@ import {
   MaterialsTable,
   type MaterialItem,
 } from "@/components/materials-table";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+
 import {
   FileText,
   Truck,
@@ -160,18 +160,11 @@ export default function MaterialPassPage() {
         setLoadingVehiculos(false);
       }
     };
-
     const fetchUltimoNumero = async () => {
       try {
-        const lastNum = await api.get<string>("/pases/ultimo-numero");
-        if (lastNum) {
-          // Si por alguna razón viene como objeto { numeroPase: "..." }
-          let rawNum =
-            typeof lastNum === "object" && (lastNum as any).numeroPase
-              ? (lastNum as any).numeroPase
-              : lastNum;
-
-          const lastNumStr = String(rawNum);
+        const result = await api.get<{ numeroPase: string | null }>("/pases/ultimo-numero");
+        if (result && result.numeroPase) {
+          const lastNumStr = String(result.numeroPase);
 
           // Intentar incrementar si es numérico
           const baseNum = parseInt(lastNumStr.replace(/\D/g, ""));
@@ -183,9 +176,14 @@ export default function MaterialPassPage() {
           } else {
             handleInputChange("folio", lastNumStr);
           }
+        } else {
+          // Si no hay pases previos, empezamos con el 0001
+          handleInputChange("folio", "0001");
         }
       } catch (error) {
         console.error("Error al cargar último número:", error);
+        // En caso de error de red o parsing, también ponemos el 0001 por seguridad
+        handleInputChange("folio", "0001");
       }
     };
 
@@ -199,7 +197,8 @@ export default function MaterialPassPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [openDestino, setOpenDestino] = useState(false);
-  const [openEmpleado, setOpenEmpleado] = useState(false);
+  const [openDespachador, setOpenDespachador] = useState(false);
+  const [openSolicitante, setOpenSolicitante] = useState(false);
   const [openConductor, setOpenConductor] = useState(false);
   const [openVehiculoFMO, setOpenVehiculoFMO] = useState(false);
   const [openVehiculoParticular, setOpenVehiculoParticular] = useState(false);
@@ -237,10 +236,10 @@ export default function MaterialPassPage() {
       numero_compra: formData.ordenCompra,
       tipo_pago: formData.tipoPago,
       // Intentar obtener los IDs reales de los empleados vinculados
-      solicitadorId: getEmpleadoId("0000") || 1, // Por ahora default admin o el primer empleado
+      solicitadorId: getEmpleadoId(formData.fichaSolicitante),
       conductorId: getEmpleadoId(formData.fichaConductor),
       despachadorId: getEmpleadoId(formData.fichaDespachador),
-      autorizadorId: getEmpleadoId("15508"), // Carmen Marquez
+      autorizadorId: getEmpleadoId("15508"), // Carmen Marquez (Ficha fija por ahora según diseño)
       vehiculoId: formData.vehiculoFMO ? parseInt(formData.vehiculoFMO) : null,
       equipos: items.map((item) => ({
         descripcion: item.descripcion,
@@ -379,7 +378,7 @@ export default function MaterialPassPage() {
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <SidebarTrigger className="text-primary-foreground hover:bg-primary-foreground/10" />
+
               <div className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center">
                 <Truck className="h-6 w-6" />
               </div>
@@ -690,7 +689,7 @@ export default function MaterialPassPage() {
                         </CommandEmpty>
                         <CommandGroup heading="Conductores Registrados">
                           {empleados
-                            .filter((e) => e.rol === "Conductor")
+                            .filter((e) => e.rol?.toLowerCase() === "conductor")
                             .map((empleado) => (
                               <CommandItem
                                 key={empleado.id}
@@ -858,12 +857,12 @@ export default function MaterialPassPage() {
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2 md:col-span-2">
                 <Label>Nombre</Label>
-                <Popover open={openEmpleado} onOpenChange={setOpenEmpleado}>
+                <Popover open={openDespachador} onOpenChange={setOpenDespachador}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       role="combobox"
-                      aria-expanded={openEmpleado}
+                      aria-expanded={openDespachador}
                       className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
                     >
                       {formData.despachadoPor ||
@@ -885,7 +884,7 @@ export default function MaterialPassPage() {
                             </div>
                           ) : (
                             empleados
-                              .filter((e) => e.rol === "Despachador")
+                              .filter((e) => e.rol?.toLowerCase() === "despachador")
                               .map((empleado) => (
                                 <CommandItem
                                   key={empleado.id}
@@ -907,7 +906,7 @@ export default function MaterialPassPage() {
                                       "departamentoDespachador",
                                       empleado.departamento,
                                     );
-                                    setOpenEmpleado(false);
+                                    setOpenDespachador(false);
                                   }}
                                 >
                                   <Check
@@ -936,7 +935,7 @@ export default function MaterialPassPage() {
                               handleInputChange("fichaDespachador", "");
                               handleInputChange("cargoDespachador", "");
                               handleInputChange("departamentoDespachador", "");
-                              setOpenEmpleado(false);
+                              setOpenDespachador(false);
                             }}
                             className="text-primary font-medium"
                           >
@@ -1003,12 +1002,12 @@ export default function MaterialPassPage() {
               <div className="space-y-2">
                 <Label>Nombre del Solicitante</Label>
                 <div className="flex flex-col gap-2">
-                  <Popover open={openEmpleado} onOpenChange={setOpenEmpleado}>
+                  <Popover open={openSolicitante} onOpenChange={setOpenSolicitante}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         role="combobox"
-                        aria-expanded={openEmpleado}
+                        aria-expanded={openSolicitante}
                         className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
                       >
                         {formData.solicitante || "Seleccionar solicitante..."}
@@ -1021,7 +1020,9 @@ export default function MaterialPassPage() {
                         <CommandList>
                           <CommandEmpty>No se encontró el empleado.</CommandEmpty>
                           <CommandGroup heading="Empleados Registrados">
-                            {empleados.map((empleado) => (
+                            {empleados
+                                .filter((e) => e.rol?.toLowerCase() === "solicitante")
+                                .map((empleado) => (
                               <CommandItem
                                 key={empleado.id}
                                 value={`${empleado.nombre} ${empleado.ficha}`}
@@ -1030,7 +1031,7 @@ export default function MaterialPassPage() {
                                   handleInputChange("fichaSolicitante", empleado.ficha);
                                   handleInputChange("cargoSolicitante", empleado.cargo);
                                   handleInputChange("departamentoSolicitante", empleado.departamento);
-                                  setOpenEmpleado(false);
+                                  setOpenSolicitante(false);
                                 }}
                               >
                                 <Check
@@ -1096,17 +1097,7 @@ export default function MaterialPassPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
-              <div className="space-y-2">
-                <Label>Observaciones / Dirigido A:</Label>
-                <Textarea
-                  className="min-h-[60px] border-slate-400"
-                  placeholder="Ej: ATENCION LEIDA AYALA"
-                  value={formData.observaciones}
-                  onChange={(e) =>
-                    handleInputChange("observaciones", e.target.value)
-                  }
-                />
-              </div>
+
               <div className="space-y-2">
                 <Label>Solicitud (Motivo):</Label>
                 <Select
