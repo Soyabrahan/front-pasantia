@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { Header } from "@/components/header"
 
 import {
     Card,
@@ -317,20 +318,12 @@ export default function ConfigurationPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Header / Letterhead */}
-            <header className="bg-primary text-primary-foreground shadow-lg mb-8">
-                <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center">
-                            <UsersIcon className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <h1 className="text-lg font-bold tracking-tight">GESTIÓN DE DATOS MAESTROS</h1>
-                            <p className="text-xs text-primary-foreground/70">Configuración del Sistema FMO</p>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <Header 
+                title="GESTIÓN DE DATOS MAESTROS"
+                subtitle="Configuración del Sistema FMO"
+                icon={UsersIcon}
+                maxWidth="max-w-6xl"
+            />
 
             <main className="p-6 space-y-6 max-w-6xl mx-auto animate-fadeIn">
 

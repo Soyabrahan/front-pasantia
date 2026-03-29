@@ -30,6 +30,7 @@ import {
   Check,
   ChevronsUpDown,
   Plus,
+  Search,
 } from "lucide-react";
 
 import {
@@ -54,8 +55,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { Header } from "@/components/header";
 
 import { api } from "@/lib/api-client";
+import { AddEntityModal } from "@/components/add-entity-modal";
 
 interface Destino {
   id: string | number;
@@ -202,6 +205,43 @@ export default function MaterialPassPage() {
   const [openConductor, setOpenConductor] = useState(false);
   const [openVehiculoFMO, setOpenVehiculoFMO] = useState(false);
   const [openVehiculoParticular, setOpenVehiculoParticular] = useState(false);
+
+  // States for AddEntityModal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<"empleado" | "destino">("empleado");
+  const [modalRole, setModalRole] = useState<string>("");
+
+  const openAddModal = (type: "empleado" | "destino", role: string = "") => {
+    setModalType(type);
+    setModalRole(role);
+    setIsModalOpen(true);
+  };
+
+  const handleEntityAdded = (data: any) => {
+    if (modalType === "empleado") {
+      setEmpleados((prev) => [...prev, data]);
+      // Auto-select based on role
+      if (modalRole === "Conductor") {
+        handleInputChange("conductor", data.nombre);
+        handleInputChange("fichaConductor", data.ficha);
+      } else if (modalRole === "Despachador") {
+        handleInputChange("despachadoPor", data.nombre);
+        handleInputChange("fichaDespachador", data.ficha);
+        handleInputChange("cargoDespachador", data.cargo);
+        handleInputChange("departamentoDespachador", data.departamento);
+      } else if (modalRole === "Solicitante") {
+        handleInputChange("solicitante", data.nombre);
+        handleInputChange("fichaSolicitante", data.ficha);
+        handleInputChange("cargoSolicitante", data.cargo);
+        handleInputChange("departamentoSolicitante", data.departamento);
+      }
+    } else {
+      setDestinos((prev) => [...prev, data]);
+      handleInputChange("embargueseA", data.nombre);
+      handleInputChange("direccion", data.direccion);
+      handleInputChange("telefono", data.telefono);
+    }
+  };
 
   // Smart Extraction
   const extractedData = React.useMemo(() => {
@@ -373,33 +413,17 @@ export default function MaterialPassPage() {
 
   return (
     <div className="min-h-screen bg-background pb-10">
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground sticky top-0 z-50 shadow-lg mb-8">
-        <div className="max-w-5xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-
-              <div className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center">
-                <Truck className="h-6 w-6" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold tracking-tight">
-                  PASE PARA MATERIALES Y MISCELÁNEOS
-                </h1>
-                <p className="text-xs text-primary-foreground/70">
-                  Sistema de Gestión de Pases FMO
-                </p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="flex items-center gap-2 text-sm text-primary-foreground/80">
-                <Calendar className="h-4 w-4" />
-                <span>{formData.fecha}</span>
-              </div>
-            </div>
+      <Header 
+        title="PASE PARA MATERIALES Y MISCELÁNEOS"
+        subtitle="Sistema de Gestión de Pases FMO"
+        icon={Truck}
+        rightElement={
+          <div className="flex items-center gap-2 text-sm text-primary-foreground/80">
+            <Calendar className="h-4 w-4" />
+            <span>{formData.fecha}</span>
           </div>
-        </div>
-      </header>
+        }
+      />
 
       <main className="max-w-5xl mx-auto px-4 space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -488,10 +512,15 @@ export default function MaterialPassPage() {
                       variant="outline"
                       role="combobox"
                       aria-expanded={openDestino}
-                      className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
+                      className={cn(
+                        "w-full justify-between border-slate-400 font-normal hover:bg-slate-50 transition-colors",
+                        !formData.embargueseA && "text-muted-foreground"
+                      )}
                     >
-                      {formData.embargueseA ||
-                        "Seleccionar o escribir destino..."}
+                      <div className="flex items-center gap-2 truncate">
+                        <MapPin className="h-4 w-4 text-primary/70" />
+                        {formData.embargueseA || "Seleccionar destino..."}
+                      </div>
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -566,15 +595,13 @@ export default function MaterialPassPage() {
                         <CommandGroup>
                           <CommandItem
                             onSelect={() => {
-                              handleInputChange("embargueseA", "");
-                              handleInputChange("direccion", "");
-                              handleInputChange("telefono", "");
+                              openAddModal("destino");
                               setOpenDestino(false);
                             }}
                             className="text-primary font-medium"
                           >
                             <Plus className="mr-2 h-4 w-4" />
-                            Agregar Nuevo / Personalizado
+                            Agregar Nuevo Destino
                           </CommandItem>
                         </CommandGroup>
                       </CommandList>
@@ -583,9 +610,10 @@ export default function MaterialPassPage() {
                 </Popover>
                 {/* Fallback input for manual typing if not selected from list */}
                 <Input
-                  className="mt-2 border-slate-400"
-                  placeholder="Escriba aquí para especificar manualmente..."
+                  className="mt-2 border-slate-400 cursor-not-allowed bg-slate-100 text-slate-600 focus-visible:ring-0"
+                  placeholder="Se llena automáticamente al seleccionar..."
                   value={formData.embargueseA}
+                  readOnly
                   onChange={(e) =>
                     handleInputChange("embargueseA", e.target.value)
                   }
@@ -605,8 +633,9 @@ export default function MaterialPassPage() {
                 <Label>Teléfono</Label>
                 <Input
                   type="tel"
-                  className="border-slate-400"
+                  className="border-slate-400 cursor-not-allowed bg-slate-100 text-slate-600 focus-visible:ring-0"
                   value={formData.telefono}
+                  readOnly
                   onChange={(e) =>
                     handleInputChange("telefono", e.target.value)
                   }
@@ -615,8 +644,9 @@ export default function MaterialPassPage() {
               <div className="space-y-2 md:col-span-2">
                 <Label>Dirección</Label>
                 <Input
-                  className="border-slate-400"
+                  className="border-slate-400 cursor-not-allowed bg-slate-100 text-slate-600 focus-visible:ring-0"
                   value={formData.direccion}
+                  readOnly
                   onChange={(e) =>
                     handleInputChange("direccion", e.target.value)
                   }
@@ -664,114 +694,100 @@ export default function MaterialPassPage() {
                 Conductor y Vehículo
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nombre del Conductor</Label>
-                <Popover open={openConductor} onOpenChange={setOpenConductor}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openConductor}
-                      className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
-                    >
-                      {formData.conductor ||
-                        "Seleccionar o escribir conductor..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Buscar conductor por nombre o ficha..." />
-                      <CommandList>
-                        <CommandEmpty className="p-2 text-sm">
-                          No se encontró el conductor.
-                        </CommandEmpty>
-                        <CommandGroup heading="Conductores Registrados">
-                          {empleados
-                            .filter((e) => e.rol?.toLowerCase() === "conductor")
-                            .map((empleado) => (
-                              <CommandItem
-                                key={empleado.id}
-                                value={`${empleado.nombre} ${empleado.ficha}`}
-                                onSelect={() => {
-                                  handleInputChange(
-                                    "conductor",
-                                    empleado.nombre,
-                                  );
-                                  handleInputChange(
-                                    "fichaConductor",
-                                    empleado.ficha,
-                                  );
-                                  setOpenConductor(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    formData.conductor === empleado.nombre
-                                      ? "opacity-100"
-                                      : "opacity-0",
-                                  )}
-                                />
-                                <div className="flex flex-col">
-                                  <span>{empleado.nombre}</span>
-                                  <span className="text-xs text-muted-foreground">
-                                    Ficha: {empleado.ficha}
-                                  </span>
-                                </div>
-                              </CommandItem>
-                            ))}
-                        </CommandGroup>
-                        <CommandSeparator />
-                        <CommandGroup>
-                          <CommandItem
-                            onSelect={() => {
-                              handleInputChange("conductor", "");
-                              handleInputChange("fichaConductor", "");
-                              setOpenConductor(false);
-                            }}
-                            className="text-primary font-medium"
-                          >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Limpiar / Personalizado
-                          </CommandItem>
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <Input
-                  className="mt-2 border-slate-400"
-                  placeholder="Escriba aquí si es externo..."
-                  value={formData.conductor}
-                  onChange={(e) =>
-                    handleInputChange("conductor", e.target.value)
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Ficha o C.I.</Label>
-                <Input
-                  className="border-slate-400"
-                  value={formData.fichaConductor}
-                  onChange={(e) =>
-                    handleInputChange("fichaConductor", e.target.value)
-                  }
-                />
-              </div>
-              <div className="md:col-span-2 pt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+              {/* Left Column: Manual/Search */}
+              <div className="flex flex-col gap-4">
                 <div className="space-y-2">
-                  <Label>Vehículo F.M.O</Label>
+                  <Label>Nombre del Conductor</Label>
+                  <Popover open={openConductor} onOpenChange={setOpenConductor}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openConductor}
+                        className={cn(
+                          "w-full justify-between border-slate-400 font-normal hover:bg-slate-50 transition-colors",
+                          !formData.conductor && "text-muted-foreground"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <User className="h-4 w-4 text-primary/70" />
+                          {formData.conductor || "Seleccionar conductor..."}
+                        </div>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar conductor por nombre o ficha..." />
+                        <CommandList>
+                          <CommandEmpty className="p-2 text-sm">
+                            No se encontró el conductor.
+                          </CommandEmpty>
+                          <CommandGroup heading="Conductores Registrados">
+                            {empleados
+                              .filter((e) => e.rol?.toLowerCase() === "conductor")
+                              .map((empleado) => (
+                                <CommandItem
+                                  key={empleado.id}
+                                  value={`${empleado.nombre} ${empleado.ficha}`}
+                                  onSelect={() => {
+                                    handleInputChange(
+                                      "conductor",
+                                      empleado.nombre,
+                                    );
+                                    handleInputChange(
+                                      "fichaConductor",
+                                      empleado.ficha,
+                                    );
+                                    setOpenConductor(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formData.conductor === empleado.nombre
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span>{empleado.nombre}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      Ficha: {empleado.ficha}
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                          <CommandSeparator />
+                          <CommandGroup>
+                            <CommandItem
+                              onSelect={() => {
+                                openAddModal("empleado", "Conductor");
+                                setOpenConductor(false);
+                              }}
+                              className="text-primary font-medium"
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Agregar Nuevo Conductor
+                            </CommandItem>
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <Input
-                    className="border-slate-400"
-                    placeholder="Se llenará automáticamente o escriba..."
-                    value={formData.vehiculoFMO as string}
+                    className="mt-2 border-slate-400 cursor-not-allowed bg-slate-100 text-slate-600 focus-visible:ring-0"
+                    placeholder="Se llena automáticamente al seleccionar..."
+                    value={formData.conductor}
+                    readOnly
                     onChange={(e) =>
-                      handleInputChange("vehiculoFMO", e.target.value)
+                      handleInputChange("conductor", e.target.value)
                     }
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label>Vehículo Particular</Label>
                   <Popover
@@ -783,10 +799,15 @@ export default function MaterialPassPage() {
                         variant="outline"
                         role="combobox"
                         aria-expanded={openVehiculoParticular}
-                        className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
+                        className={cn(
+                          "w-full justify-between border-slate-400 font-normal hover:bg-slate-50 transition-colors",
+                          !formData.vehiculoParticular && "text-muted-foreground"
+                        )}
                       >
-                        {formData.vehiculoParticular ||
-                          "Elegir vehículo particular..."}
+                        <div className="flex items-center gap-2 truncate">
+                          <Truck className="h-4 w-4 text-primary/70" />
+                          {formData.vehiculoParticular || "Elegir vehículo..."}
+                        </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
@@ -843,6 +864,33 @@ export default function MaterialPassPage() {
                   />
                 </div>
               </div>
+
+              {/* Right Column: Auto-filled */}
+              <div className="flex flex-col gap-4">
+                <div className="space-y-2">
+                  <Label>Ficha o C.I. (Autocompletado)</Label>
+                  <Input
+                    className="border-slate-400 cursor-not-allowed bg-slate-100 text-slate-600 focus-visible:ring-0"
+                    value={formData.fichaConductor}
+                    readOnly
+                    onChange={(e) =>
+                      handleInputChange("fichaConductor", e.target.value)
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Vehículo F.M.O (Autocompletado)</Label>
+                  <Input
+                    className="border-slate-400 cursor-not-allowed bg-slate-100 text-slate-600 focus-visible:ring-0"
+                    placeholder="Se llenará automáticamente o escriba..."
+                    value={formData.vehiculoFMO as string}
+                    onChange={(e) =>
+                      handleInputChange("vehiculoFMO", e.target.value)
+                    }
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -854,138 +902,150 @@ export default function MaterialPassPage() {
                 Material Despachado Por
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2 md:col-span-2">
-                <Label>Nombre</Label>
-                <Popover open={openDespachador} onOpenChange={setOpenDespachador}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openDespachador}
-                      className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
-                    >
-                      {formData.despachadoPor ||
-                        "Seleccionar o escribir empleado..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Buscar empleado por nombre o ficha..." />
-                      <CommandList>
-                        <CommandEmpty className="p-2 text-sm">
-                          No se encontró el empleado.
-                        </CommandEmpty>
-                        <CommandGroup heading="Empleados Registrados">
-                          {loadingEmpleados ? (
-                            <div className="p-4 text-center text-sm text-muted-foreground">
-                              Cargando empleados...
-                            </div>
-                          ) : (
-                            empleados
-                              .filter((e) => e.rol?.toLowerCase() === "despachador")
-                              .map((empleado) => (
-                                <CommandItem
-                                  key={empleado.id}
-                                  value={`${empleado.nombre} ${empleado.ficha}`}
-                                  onSelect={() => {
-                                    handleInputChange(
-                                      "despachadoPor",
-                                      empleado.nombre,
-                                    );
-                                    handleInputChange(
-                                      "fichaDespachador",
-                                      empleado.ficha,
-                                    );
-                                    handleInputChange(
-                                      "cargoDespachador",
-                                      empleado.cargo,
-                                    );
-                                    handleInputChange(
-                                      "departamentoDespachador",
-                                      empleado.departamento,
-                                    );
-                                    setOpenDespachador(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      formData.despachadoPor === empleado.nombre
-                                        ? "opacity-100"
-                                        : "opacity-0",
-                                    )}
-                                  />
-                                  <div className="flex flex-col">
-                                    <span>{empleado.nombre}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                      Ficha: {empleado.ficha} | {empleado.cargo}
-                                    </span>
-                                  </div>
-                                </CommandItem>
-                              ))
-                          )}
-                        </CommandGroup>
-                        <CommandSeparator />
-                        <CommandGroup>
-                          <CommandItem
-                            onSelect={() => {
-                              handleInputChange("despachadoPor", "");
-                              handleInputChange("fichaDespachador", "");
-                              handleInputChange("cargoDespachador", "");
-                              handleInputChange("departamentoDespachador", "");
-                              setOpenDespachador(false);
-                            }}
-                            className="text-primary font-medium"
-                          >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Limpiar / Personalizado
-                          </CommandItem>
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                {/* Fallback input for manual typing */}
-                <Input
-                  className="mt-2 border-slate-400"
-                  placeholder="Nombre manualmente..."
-                  value={formData.despachadoPor}
-                  onChange={(e) =>
-                    handleInputChange("despachadoPor", e.target.value)
-                  }
-                />
+            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+              {/* Left Column: Manual/Search */}
+              <div className="flex flex-col gap-4">
+                <div className="space-y-2">
+                  <Label>Nombre</Label>
+                  <Popover open={openDespachador} onOpenChange={setOpenDespachador}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openDespachador}
+                        className={cn(
+                          "w-full justify-between border-slate-400 font-normal hover:bg-slate-50 transition-colors",
+                          !formData.despachadoPor && "text-muted-foreground"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <Search className="h-4 w-4 text-primary/70" />
+                          {formData.despachadoPor || "Seleccionar despachador..."}
+                        </div>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar empleado por nombre o ficha..." />
+                        <CommandList>
+                          <CommandEmpty className="p-2 text-sm">
+                            No se encontró el empleado.
+                          </CommandEmpty>
+                          <CommandGroup heading="Empleados Registrados">
+                            {loadingEmpleados ? (
+                              <div className="p-4 text-center text-sm text-muted-foreground">
+                                Cargando empleados...
+                              </div>
+                            ) : (
+                              empleados
+                                .filter((e) => e.rol?.toLowerCase() === "despachador")
+                                .map((empleado) => (
+                                  <CommandItem
+                                    key={empleado.id}
+                                    value={`${empleado.nombre} ${empleado.ficha}`}
+                                    onSelect={() => {
+                                      handleInputChange(
+                                        "despachadoPor",
+                                        empleado.nombre,
+                                      );
+                                      handleInputChange(
+                                        "fichaDespachador",
+                                        empleado.ficha,
+                                      );
+                                      handleInputChange(
+                                        "cargoDespachador",
+                                        empleado.cargo,
+                                      );
+                                      handleInputChange(
+                                        "departamentoDespachador",
+                                        empleado.departamento,
+                                      );
+                                      setOpenDespachador(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        formData.despachadoPor === empleado.nombre
+                                          ? "opacity-100"
+                                          : "opacity-0",
+                                      )}
+                                    />
+                                    <div className="flex flex-col">
+                                      <span>{empleado.nombre}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        Ficha: {empleado.ficha} | {empleado.cargo}
+                                      </span>
+                                    </div>
+                                  </CommandItem>
+                                ))
+                            )}
+                          </CommandGroup>
+                          <CommandSeparator />
+                          <CommandGroup>
+                            <CommandItem
+                              onSelect={() => {
+                                openAddModal("empleado", "Despachador");
+                                setOpenDespachador(false);
+                              }}
+                              className="text-primary font-medium"
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Agregar Nuevo Despachador
+                            </CommandItem>
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <Input
+                    className="mt-2 border-slate-400 cursor-not-allowed bg-slate-100 text-slate-600 focus-visible:ring-0"
+                    placeholder="Se llena automáticamente al seleccionar..."
+                    value={formData.despachadoPor}
+                    readOnly
+                    onChange={(e) =>
+                      handleInputChange("despachadoPor", e.target.value)
+                    }
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Ficha</Label>
-                <Input
-                  className="border-slate-400"
-                  value={formData.fichaDespachador}
-                  onChange={(e) =>
-                    handleInputChange("fichaDespachador", e.target.value)
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Cargo</Label>
-                <Input
-                  className="border-slate-400"
-                  value={formData.cargoDespachador}
-                  onChange={(e) =>
-                    handleInputChange("cargoDespachador", e.target.value)
-                  }
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>Departamento</Label>
-                <Input
-                  className="border-slate-400"
-                  value={formData.departamentoDespachador}
-                  onChange={(e) =>
-                    handleInputChange("departamentoDespachador", e.target.value)
-                  }
-                />
+
+              {/* Right Column: Auto-filled */}
+              <div className="flex flex-col gap-4">
+                <div className="space-y-2">
+                  <Label>Ficha (Autocompletado)</Label>
+                  <Input
+                    className="border-slate-400 cursor-not-allowed bg-slate-100 text-slate-600 focus-visible:ring-0"
+                    value={formData.fichaDespachador}
+                    readOnly
+                    onChange={(e) =>
+                      handleInputChange("fichaDespachador", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Cargo (Autocompletado)</Label>
+                  <Input
+                    className="border-slate-400 cursor-not-allowed bg-slate-100 text-slate-600 focus-visible:ring-0"
+                    value={formData.cargoDespachador}
+                    readOnly
+                    onChange={(e) =>
+                      handleInputChange("cargoDespachador", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Departamento (Autocompletado)</Label>
+                  <Input
+                    className="border-slate-400 cursor-not-allowed bg-slate-100 text-slate-600 focus-visible:ring-0"
+                    value={formData.departamentoDespachador}
+                    readOnly
+                    onChange={(e) =>
+                      handleInputChange("departamentoDespachador", e.target.value)
+                    }
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -998,92 +1058,122 @@ export default function MaterialPassPage() {
                 Datos del Solicitante
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nombre del Solicitante</Label>
-                <div className="flex flex-col gap-2">
-                  <Popover open={openSolicitante} onOpenChange={setOpenSolicitante}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openSolicitante}
-                        className="w-full justify-between border-slate-400 font-normal hover:bg-transparent"
-                      >
-                        {formData.solicitante || "Seleccionar solicitante..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Buscar por nombre o ficha..." />
-                        <CommandList>
-                          <CommandEmpty>No se encontró el empleado.</CommandEmpty>
-                          <CommandGroup heading="Empleados Registrados">
-                            {empleados
-                                .filter((e) => e.rol?.toLowerCase() === "solicitante")
-                                .map((empleado) => (
+            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+              {/* Left Column: Manual/Search */}
+              <div className="flex flex-col gap-4">
+                <div className="space-y-2">
+                  <Label>Nombre del Solicitante</Label>
+                  <div className="flex flex-col gap-2">
+                    <Popover open={openSolicitante} onOpenChange={setOpenSolicitante}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openSolicitante}
+                          className={cn(
+                            "w-full justify-between border-slate-400 font-normal hover:bg-slate-50 transition-colors",
+                            !formData.solicitante && "text-muted-foreground"
+                          )}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <UserCheck className="h-4 w-4 text-primary/70" />
+                            {formData.solicitante || "Seleccionar solicitante..."}
+                          </div>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Buscar por nombre o ficha..." />
+                          <CommandList>
+                            <CommandEmpty>No se encontró el empleado.</CommandEmpty>
+                            <CommandGroup heading="Empleados Registrados">
+                              {empleados
+                                  .filter((e) => e.rol?.toLowerCase() === "solicitante")
+                                  .map((empleado) => (
+                                <CommandItem
+                                  key={empleado.id}
+                                  value={`${empleado.nombre} ${empleado.ficha}`}
+                                  onSelect={() => {
+                                    handleInputChange("solicitante", empleado.nombre);
+                                    handleInputChange("fichaSolicitante", empleado.ficha);
+                                    handleInputChange("cargoSolicitante", empleado.cargo);
+                                    handleInputChange("departamentoSolicitante", empleado.departamento);
+                                    setOpenSolicitante(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formData.solicitante === empleado.nombre ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span>{empleado.nombre}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      F- {empleado.ficha} | {empleado.cargo}
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                            <CommandSeparator />
+                            <CommandGroup>
                               <CommandItem
-                                key={empleado.id}
-                                value={`${empleado.nombre} ${empleado.ficha}`}
                                 onSelect={() => {
-                                  handleInputChange("solicitante", empleado.nombre);
-                                  handleInputChange("fichaSolicitante", empleado.ficha);
-                                  handleInputChange("cargoSolicitante", empleado.cargo);
-                                  handleInputChange("departamentoSolicitante", empleado.departamento);
+                                  openAddModal("empleado", "Solicitante");
                                   setOpenSolicitante(false);
                                 }}
+                                className="text-primary font-medium"
                               >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    formData.solicitante === empleado.nombre ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <div className="flex flex-col">
-                                  <span>{empleado.nombre}</span>
-                                  <span className="text-xs text-muted-foreground">
-                                    F- {empleado.ficha} | {empleado.cargo}
-                                  </span>
-                                </div>
+                                <Plus className="mr-2 h-4 w-4" />
+                                Agregar Nuevo Solicitante
                               </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  <Input
-                    className="border-slate-400"
-                    placeholder="Nombre manualmente..."
-                    value={formData.solicitante}
-                    onChange={(e) => handleInputChange("solicitante", e.target.value)}
-                  />
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <Input
+                      className="border-slate-400 cursor-not-allowed bg-slate-100 text-slate-600 focus-visible:ring-0"
+                      placeholder="Se llena automáticamente al seleccionar..."
+                      value={formData.solicitante}
+                      readOnly
+                      onChange={(e) => handleInputChange("solicitante", e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Ficha</Label>
-                <Input
-                  className="border-slate-400"
-                  value={formData.fichaSolicitante}
-                  onChange={(e) => handleInputChange("fichaSolicitante", e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Cargo</Label>
-                <Input
-                  className="border-slate-400"
-                  value={formData.cargoSolicitante}
-                  onChange={(e) => handleInputChange("cargoSolicitante", e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Departamento</Label>
-                <Input
-                  className="border-slate-400"
-                  value={formData.departamentoSolicitante}
-                  onChange={(e) => handleInputChange("departamentoSolicitante", e.target.value)}
-                />
+
+              {/* Right Column: Auto-filled */}
+              <div className="flex flex-col gap-4">
+                <div className="space-y-2">
+                  <Label>Ficha (Autocompletado)</Label>
+                  <Input
+                    className="border-slate-400 cursor-not-allowed bg-slate-100 text-slate-600 focus-visible:ring-0"
+                    value={formData.fichaSolicitante}
+                    readOnly
+                    onChange={(e) => handleInputChange("fichaSolicitante", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Cargo (Autocompletado)</Label>
+                  <Input
+                    className="border-slate-400 cursor-not-allowed bg-slate-100 text-slate-600 focus-visible:ring-0"
+                    value={formData.cargoSolicitante}
+                    readOnly
+                    onChange={(e) => handleInputChange("cargoSolicitante", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Departamento (Autocompletado)</Label>
+                  <Input
+                    className="border-slate-400 cursor-not-allowed bg-slate-100 text-slate-600 focus-visible:ring-0"
+                    value={formData.departamentoSolicitante}
+                    readOnly
+                    onChange={(e) => handleInputChange("departamentoSolicitante", e.target.value)}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1227,6 +1317,13 @@ export default function MaterialPassPage() {
           </div>
         </form>
       </main>
+    <AddEntityModal 
+      isOpen={isModalOpen}
+      onClose={() => setIsModalOpen(false)}
+      type={modalType}
+      role={modalRole}
+      onSuccess={handleEntityAdded}
+    />
     </div>
   );
 }

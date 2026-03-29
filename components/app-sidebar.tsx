@@ -46,7 +46,19 @@ export function AppSidebar() {
         const token = localStorage.getItem("auth_token")
         if (token) {
             try {
-                const payload = JSON.parse(atob(token.split('.')[1]))
+                const tokenParts = token.split('.');
+                if (tokenParts.length < 2) {
+                    throw new Error("Formato de token inválido");
+                }
+                let base64 = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
+                const pad = base64.length % 4;
+                if (pad) {
+                    base64 += '='.repeat(4 - pad);
+                }
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
+                    '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+                ).join(''));
+                const payload = JSON.parse(jsonPayload);
                 setUserName(payload.nombre || payload.username || payload.ficha || payload.sub || "Usuario")
             } catch (e) {
                 console.error("Error decoding token", e)

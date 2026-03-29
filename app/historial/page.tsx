@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Search, Filter, Calendar as CalendarIcon, FileText, Pencil, History } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Header } from "@/components/header";
 
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
@@ -145,21 +146,11 @@ export default function HistoryPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Header / Letterhead */}
-            <header className="bg-primary text-primary-foreground shadow-lg mb-8">
-                <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-4">
-
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center">
-                            <History className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <h1 className="text-lg font-bold tracking-tight">HISTORIAL DE PASES</h1>
-                            <p className="text-xs text-primary-foreground/70">Consulta de Registros FMO</p>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <Header 
+                title="HISTORIAL DE PASES"
+                subtitle="Consulta de Registros FMO"
+                icon={History}
+            />
 
             <main className="max-w-5xl mx-auto px-4 space-y-6">
 
