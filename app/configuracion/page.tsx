@@ -321,7 +321,7 @@ export default function ConfigurationPage() {
             <Header 
                 title="GESTIÓN DE DATOS MAESTROS"
                 subtitle="Configuración del Sistema FMO"
-                icon={UsersIcon}
+                icon={<UsersIcon className="h-6 w-6" />}
                 maxWidth="max-w-6xl"
             />
 

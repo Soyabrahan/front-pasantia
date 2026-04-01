@@ -416,7 +416,7 @@ export default function MaterialPassPage() {
       <Header 
         title="PASE PARA MATERIALES Y MISCELÁNEOS"
         subtitle="Sistema de Gestión de Pases FMO"
-        icon={Truck}
+        icon={<Truck className="h-6 w-6" />}
         rightElement={
           <div className="flex items-center gap-2 text-sm text-primary-foreground/80">
             <Calendar className="h-4 w-4" />

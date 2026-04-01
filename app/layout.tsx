@@ -2,13 +2,18 @@
 
 import React, { useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Outfit } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { Toaster } from "sonner"
 
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
+
+const outfit = Outfit({ 
+  subsets: ['latin'],
+  variable: '--font-outfit',
+})
 
 export default function RootLayout({
   children,
@@ -39,7 +44,7 @@ export default function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-sans antialiased text-white bg-[#0A0A0A]" suppressHydrationWarning>
+      <body className={`font-sans antialiased text-white bg-[#0A0A0A] ${outfit.variable}`} suppressHydrationWarning>
         {(!isMounted || (isLoading && !isAuthPage)) ? (
           <div className="flex items-center justify-center min-h-screen">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>

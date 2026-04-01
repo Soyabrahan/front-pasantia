@@ -32,6 +32,7 @@ export default function LoginPage() {
       
       if (response.access_token) {
         localStorage.setItem("auth_token", response.access_token)
+        document.cookie = `auth_token=${response.access_token}; path=/; max-age=86400; SameSite=Lax`
         toast.success("Bienvenido al sistema")
         router.push("/")
       }

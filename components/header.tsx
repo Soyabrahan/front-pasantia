@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 interface HeaderProps {
     title: string
     subtitle?: string
-    icon: React.ElementType
+    icon: React.ReactNode
     rightElement?: React.ReactNode
     maxWidth?: string
 }
@@ -15,7 +15,7 @@ interface HeaderProps {
 export function Header({ 
     title, 
     subtitle, 
-    icon: Icon, 
+    icon, 
     rightElement,
     maxWidth = "max-w-5xl" 
 }: HeaderProps) {
@@ -36,7 +36,7 @@ export function Header({
             >
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center shrink-0">
-                        <Icon className="h-6 w-6" />
+                        {icon}
                     </div>
                     <div className="overflow-hidden">
                         <h1 className="text-lg font-bold tracking-tight truncate uppercase">
