@@ -428,7 +428,7 @@ export default function MaterialPassPage() {
       <main className="max-w-5xl mx-auto px-4 space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Concept Options */}
-          <Card>
+          <Card className="animate-in slide-in-from-bottom-4 fade-in duration-700 delay-100 fill-mode-both border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="pb-3 border-b">
               <CardTitle className="text-lg font-semibold flex items-center justify-between gap-2 w-full">
                 <div className="flex items-center gap-2">
@@ -496,7 +496,7 @@ export default function MaterialPassPage() {
           </Card>
 
           {/* Shipping Info */}
-          <Card className="border-slate-300">
+          <Card className="animate-in slide-in-from-bottom-4 fade-in duration-700 delay-200 fill-mode-both border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="pb-3 border-b border-slate-300">
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-primary" />
@@ -687,7 +687,7 @@ export default function MaterialPassPage() {
           </Card>
 
           {/* Driver & Vehicle */}
-          <Card className="border-slate-300">
+          <Card className="animate-in slide-in-from-bottom-4 fade-in duration-700 delay-300 fill-mode-both border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="pb-3 border-b border-slate-300">
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
                 <Truck className="h-5 w-5 text-primary" />
@@ -895,7 +895,7 @@ export default function MaterialPassPage() {
           </Card>
 
           {/* Dispatch Info */}
-          <Card className="border-slate-300">
+          <Card className="animate-in slide-in-from-bottom-4 fade-in duration-700 delay-500 fill-mode-both border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="pb-3 border-b border-slate-300">
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
                 <User className="h-5 w-5 text-primary" />

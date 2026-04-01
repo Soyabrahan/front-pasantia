@@ -105,18 +105,18 @@ export function AppSidebar() {
                                             asChild 
                                             isActive={isActive}
                                             tooltip={item.title}
-                                            className={`relative h-12 hover:bg-white/10 hover:text-white transition-colors group-data-[collapsible=icon]:h-14
+                                            className={`relative h-12 transition-all duration-200 group-data-[collapsible=icon]:h-14 overflow-hidden group/sidebar-item
                                                 ${isActive 
                                                     ? `${activeBg} text-white font-medium hover:${activeBg}` 
-                                                    : 'text-white/80'}`
+                                                    : 'text-white/80 hover:bg-white/10 hover:text-white'}`
                                             }
                                         >
-                                            <Link href={item.url}>
+                                            <Link href={item.url} className="flex items-center w-full">
                                                 {isActive && (
                                                     <div className="absolute left-0 top-0 w-1 h-full bg-[#00529b]" />
                                                 )}
-                                                <item.icon className={`size-5 group-data-[collapsible=icon]:size-7 ${isActive ? "text-white" : "text-white/80"}`} />
-                                                <span className="text-base ml-1">{item.title}</span>
+                                                <item.icon className={`size-5 transition-transform duration-300 ease-out group-hover/sidebar-item:scale-110 group-active/sidebar-item:scale-95 group-data-[collapsible=icon]:size-7 ${isActive ? "text-white scale-110" : "text-white/80"}`} />
+                                                <span className="text-base ml-2 transition-transform duration-300 group-hover/sidebar-item:translate-x-1">{item.title}</span>
                                             </Link>
                                         </SidebarMenuButton>
                                     </SidebarMenuItem>

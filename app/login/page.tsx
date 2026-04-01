@@ -45,11 +45,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-6 bg-[grid-white-fade]">
-      <div className="w-full max-w-[440px] animate-in fade-in zoom-in-95 duration-500">
-        <div className="bg-[#121212] rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl">
+      <div className="w-full max-w-[440px]">
+        <div className="bg-[#121212] rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl animate-in zoom-in-95 fade-in duration-500">
           {/* Header Rojo */}
-          <div className="bg-[#CC1414] p-10 flex flex-col items-center text-center space-y-4">
-            <div className="bg-white p-4 rounded-2xl shadow-lg">
+          <div className="bg-[#CC1414] p-10 flex flex-col items-center text-center space-y-4 animate-in slide-in-from-top-8 fade-in duration-700 fill-mode-both">
+            <div className="bg-white p-4 rounded-2xl shadow-lg hover:scale-105 transition-transform duration-300">
               <Truck className="h-10 w-10 text-[#CC1414]" />
             </div>
             <div className="space-y-1">
@@ -59,7 +59,7 @@ export default function LoginPage() {
           </div>
 
           {/* Formulario */}
-          <div className="p-10 space-y-8">
+          <div className="p-10 space-y-8 animate-in slide-in-from-bottom-8 fade-in duration-700 delay-150 fill-mode-both">
             <div className="text-center space-y-2">
               <h2 className="text-3xl font-bold text-white tracking-tight">Bienvenido</h2>
               <p className="text-zinc-500 text-sm">Ingrese sus credenciales para continuar</p>

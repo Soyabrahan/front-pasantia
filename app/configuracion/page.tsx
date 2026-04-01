@@ -349,7 +349,7 @@ export default function ConfigurationPage() {
 
                     {/* USUARIOS TAB */}
                     <TabsContent value="usuarios">
-                        <Card className="border-slate-200 shadow-sm">
+                        <Card className="border-slate-200 shadow-sm animate-in fade-in zoom-in-95 duration-500">
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <div className="space-y-1">
                                     <CardTitle>{isAdmin ? "Perfiles de Usuario" : "Configuración de mi Perfil"}</CardTitle>
@@ -557,7 +557,7 @@ export default function ConfigurationPage() {
 
                     {/* VEHICULOS TAB */}
                     <TabsContent value="vehiculos">
-                        <Card className="border-slate-200 shadow-sm">
+                        <Card className="border-slate-200 shadow-sm animate-in fade-in zoom-in-95 duration-500">
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <div className="space-y-1">
                                     <CardTitle>Flota de Vehículos</CardTitle>
@@ -670,7 +670,7 @@ export default function ConfigurationPage() {
 
                     {/* DESTINOS TAB */}
                     <TabsContent value="destinos">
-                        <Card className="border-slate-200 shadow-sm">
+                        <Card className="border-slate-200 shadow-sm animate-in fade-in zoom-in-95 duration-500">
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <div className="space-y-1">
                                     <CardTitle>Destinos Frecuentes</CardTitle>
@@ -769,7 +769,7 @@ export default function ConfigurationPage() {
 
                     {/* EMPLEADOS TAB */}
                     <TabsContent value="empleados">
-                        <Card className="border-slate-200 shadow-sm">
+                        <Card className="border-slate-200 shadow-sm animate-in fade-in zoom-in-95 duration-500">
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <div className="space-y-1">
                                     <CardTitle>Listado de Empleados</CardTitle>
