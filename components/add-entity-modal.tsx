@@ -91,7 +91,7 @@ export function AddEntityModal({
     }
   };
 
-  const inputClass = "bg-slate-50 border-slate-300 focus:border-primary focus:ring-1 focus:ring-primary h-10 transition-all";
+  const inputClass = "bg-slate-50 border-slate-300 text-slate-900 focus:border-primary focus:ring-1 focus:ring-primary h-10 transition-all";
   const labelClass = "text-sm font-semibold text-slate-700 uppercase tracking-tight";
 
   return (

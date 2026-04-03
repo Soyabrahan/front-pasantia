@@ -7,13 +7,12 @@ interface DashboardStatsProps {
     totalPases: number;
     pasesHoy: number;
     pasesSemana: number;
-    destinosActivos: number;
   };
 }
 
 export function DashboardStats({ stats }: DashboardStatsProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <Card className="overflow-hidden border-slate-200/50 shadow-sm hover:shadow-md transition-all group relative isolate">
         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
           <CardTitle className="text-sm font-medium text-slate-500">Total Pases Emitidos</CardTitle>
@@ -60,19 +59,6 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
         <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-amber-400 to-amber-600 opacity-0 group-hover:opacity-100 transition-opacity" />
       </Card>
 
-      <Card className="overflow-hidden border-slate-200/50 shadow-sm hover:shadow-md transition-all group relative isolate">
-        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-          <CardTitle className="text-sm font-medium text-slate-500">Destinos Activos</CardTitle>
-          <div className="bg-blue-500/10 p-2 rounded-md group-hover:scale-110 transition-transform group-hover:bg-blue-500/20">
-            <Truck className="h-4 w-4 text-blue-500" />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold tracking-tight">{stats.destinosActivos}</div>
-          <p className="text-xs text-muted-foreground mt-1">Destinos únicos</p>
-        </CardContent>
-        <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-blue-400 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
-      </Card>
     </div>
   );
 }

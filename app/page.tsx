@@ -96,6 +96,7 @@ export default function MaterialPassPage() {
     fichaConductor: "",
     vehiculoFMO: "",
     vehiculoParticular: "",
+    vehiculoId: null as number | null,
 
     // Dispatch Info
     despachadoPor: "",
@@ -118,6 +119,35 @@ export default function MaterialPassPage() {
     cargoSolicitante: "",
     departamentoSolicitante: "",
   });
+
+  const fetchUltimoNumero = async () => {
+    try {
+      const result = await api.get<{ numeroPase: string | null }>("/pases/ultimo-numero");
+      if (result && result.numeroPase) {
+        const lastNumStr = String(result.numeroPase);
+
+        // Intentar incrementar si es numérico
+        const baseNum = parseInt(lastNumStr.replace(/\D/g, ""));
+        if (!isNaN(baseNum)) {
+          const nextNum = (baseNum + 1)
+            .toString()
+            .padStart(lastNumStr.length, "0");
+          handleInputChange("folio", nextNum);
+          return nextNum;
+        } else {
+          handleInputChange("folio", lastNumStr);
+          return lastNumStr;
+        }
+      } else {
+        handleInputChange("folio", "0001");
+        return "0001";
+      }
+    } catch (error) {
+      console.error("Error al cargar último número:", error);
+      handleInputChange("folio", "0001");
+      return "0001";
+    }
+  };
 
   React.useEffect(() => {
     setMounted(true);
@@ -161,32 +191,6 @@ export default function MaterialPassPage() {
         console.error("Error al cargar vehículos:", error);
       } finally {
         setLoadingVehiculos(false);
-      }
-    };
-    const fetchUltimoNumero = async () => {
-      try {
-        const result = await api.get<{ numeroPase: string | null }>("/pases/ultimo-numero");
-        if (result && result.numeroPase) {
-          const lastNumStr = String(result.numeroPase);
-
-          // Intentar incrementar si es numérico
-          const baseNum = parseInt(lastNumStr.replace(/\D/g, ""));
-          if (!isNaN(baseNum)) {
-            const nextNum = (baseNum + 1)
-              .toString()
-              .padStart(lastNumStr.length, "0");
-            handleInputChange("folio", nextNum);
-          } else {
-            handleInputChange("folio", lastNumStr);
-          }
-        } else {
-          // Si no hay pases previos, empezamos con el 0001
-          handleInputChange("folio", "0001");
-        }
-      } catch (error) {
-        console.error("Error al cargar último número:", error);
-        // En caso de error de red o parsing, también ponemos el 0001 por seguridad
-        handleInputChange("folio", "0001");
       }
     };
 
@@ -261,6 +265,38 @@ export default function MaterialPassPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validación de campos obligatorios
+    const requiredFields = [
+      { field: 'folio', name: 'N° Pase' },
+      { field: 'conceptoOpcion', name: 'Concepto del Pase' },
+      { field: 'tiempoEstimado', name: 'Tiempo Estimado' },
+      { field: 'embargueseA', name: 'Embárguese a' },
+      { field: 'direccion', name: 'Dirección' },
+      { field: 'telefono', name: 'Teléfono' },
+      { field: 'conductor', name: 'Conductor' },
+      { field: 'fichaConductor', name: 'Ficha Conductor' },
+      { field: 'despachadoPor', name: 'Material Despachado Por' },
+      { field: 'fichaDespachador', name: 'Ficha Despachador' },
+      { field: 'solicitante', name: 'Solicitante' },
+      { field: 'solicitud', name: 'Solicitud' },
+    ];
+
+    const missingFields = requiredFields.filter(rf => !formData[rf.field as keyof typeof formData]);
+
+    if (!formData.vehiculoFMO && !formData.vehiculoParticular) {
+      missingFields.push({ field: 'vehiculo', name: 'Vehículo (FMO o Particular)' });
+    }
+
+    if (items.length === 0) {
+      missingFields.push({ field: 'items', name: 'Materiales (al menos 1)' });
+    }
+
+    if (missingFields.length > 0) {
+      alert(`Por favor, complete los campos obligatorios:\n- ${missingFields.map(f => f.name).join('\n- ')}`);
+      return;
+    }
+
     setIsSubmitting(true);
 
     const getEmpleadoId = (ficha: string) => {
@@ -279,17 +315,28 @@ export default function MaterialPassPage() {
       solicitadorId: getEmpleadoId(formData.fichaSolicitante),
       conductorId: getEmpleadoId(formData.fichaConductor),
       despachadorId: getEmpleadoId(formData.fichaDespachador),
-      autorizadorId: getEmpleadoId("15508"), // Carmen Marquez (Ficha fija por ahora según diseño)
-      vehiculoId: formData.vehiculoFMO ? parseInt(formData.vehiculoFMO) : null,
-      equipos: items.map((item) => ({
-        descripcion: item.descripcion,
-        cantidad:
-          typeof item.cantidad === "string"
-            ? parseInt(item.cantidad)
-            : item.cantidad,
-        unidad: item.unidad,
-        fmos: item.fmos.split(',').map(f => f.trim()).filter(f => f !== ""),
-      })),
+      autorizadorId: getEmpleadoId("15508"),
+      vehiculoId: formData.vehiculoId,
+      observaciones: formData.observaciones,
+      tiempo_estimado: formData.tiempoEstimado,
+      solicitud: formData.solicitud,
+      equipos: items.map((item) => {
+        const rawValues = item.identificadores ? item.identificadores.split(',').map(f => f.trim()).filter(f => f !== "") : [];
+        const isFMO = item.tipoIdentificador === "FMO";
+        const isSerial = item.tipoIdentificador === "Serial";
+        return {
+          marca: item.marca,
+          descripcion: item.producto,
+          cantidad:
+            typeof item.cantidad === "string"
+              ? parseInt(item.cantidad)
+              : item.cantidad,
+          unidad: item.unidad,
+          fmos: isFMO ? rawValues : [],
+          serial: isSerial ? rawValues.join(', ') : "",
+          seriales: isSerial ? rawValues : [],
+        };
+      }),
     };
 
     try {
@@ -332,8 +379,15 @@ export default function MaterialPassPage() {
         departamentoSolicitante: formData.departamentoSolicitante,
       };
 
+      const mappedItemsForPDF = items.map(item => ({
+        cantidad: item.cantidad,
+        unidad: item.unidad,
+        descripcion: `${item.marca} ${item.producto}`.trim(),
+        fmos: item.tipoIdentificador !== "S/N" ? `${item.tipoIdentificador}: ${item.identificadores}` : "",
+      }));
+
       const { generatePDF } = await import("@/lib/generatePdf");
-      generatePDF(pdfData, items);
+      generatePDF(pdfData, mappedItemsForPDF);
 
       setIsSubmitted(true);
     } catch (error) {
@@ -341,15 +395,28 @@ export default function MaterialPassPage() {
         error instanceof Error
           ? error.message
           : "Error desconocido al registrar el pase";
-      alert(errorMessage);
+          
+      if (errorMessage.toLowerCase().includes("ya existe") || errorMessage.toLowerCase().includes("duplicate") || errorMessage.toLowerCase().includes("duplicado") || errorMessage.toLowerCase().includes("tomado")) {
+        
+        const currentBase = parseInt(formData.folio.replace(/\D/g, ""));
+        if (!isNaN(currentBase)) {
+          const nextNum = (currentBase + 1).toString().padStart(formData.folio.length, "0");
+          handleInputChange("folio", nextNum);
+          alert(`Error detectado: ${errorMessage}\n\nEl sistema ha intentado avanzar al número (${nextNum}). Por favor intente registrar nuevamente con este nuevo número.`);
+        } else {
+          alert(`Error detectado: ${errorMessage}\n\nPor favor, modifique el número de pase e intente nuevamente.`);
+        }
+      } else {
+        alert(errorMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleReset = () => {
-    setFormData({
-      folio: "",
+    setFormData((prev) => ({
+      folio: prev.folio, // Keep temporalily until fetch completes
       fecha: new Date().toISOString().split("T")[0],
       hora: new Date().toLocaleTimeString("es-ES", {
         hour: "2-digit",
@@ -373,13 +440,15 @@ export default function MaterialPassPage() {
       autorizadoPor: "Carmen Marquez",
       cargoAutorizador: "Gerente de Telemática (e)",
       fichaAutorizador: "15508",
+      vehiculoId: null,
       observaciones: "",
       solicitud: "",
       solicitante: "",
       fichaSolicitante: "",
       cargoSolicitante: "",
       departamentoSolicitante: "",
-    });
+    }));
+    fetchUltimoNumero();
     setItems([]);
     setIsSubmitted(false);
   };
@@ -426,7 +495,15 @@ export default function MaterialPassPage() {
       />
 
       <main className="max-w-5xl mx-auto px-4 space-y-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form 
+          onSubmit={handleSubmit} 
+          className="space-y-6"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+              e.preventDefault();
+            }
+          }}
+        >
           {/* Concept Options */}
           <Card className="animate-in slide-in-from-bottom-4 fade-in duration-700 delay-100 fill-mode-both border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="pb-3 border-b">
@@ -822,6 +899,7 @@ export default function MaterialPassPage() {
                                 key={v.id}
                                 value={v.placa || v.fmo}
                                 onSelect={() => {
+                                  handleInputChange("vehiculoId", v.id);
                                   if (v.esFMO) {
                                     handleInputChange(
                                       "vehiculoParticular",
@@ -1296,7 +1374,7 @@ export default function MaterialPassPage() {
               type="button"
               variant="outline"
               onClick={handleReset}
-              className="h-11 px-6 bg-transparent"
+              className="h-11 px-6 border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
             >
               <RotateCcw className="h-4 w-4 mr-2" />
               Limpiar Formulario

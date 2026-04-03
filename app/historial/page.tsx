@@ -14,7 +14,6 @@ async function StatsLoader() {
         totalPases: 0,
         pasesHoy: 0,
         pasesSemana: 0,
-        destinosActivos: 0,
     };
 
     if (token) {
@@ -26,8 +25,7 @@ async function StatsLoader() {
         try {
             const res = await fetch(`${API_URL}/pases`, {
                 headers: { Authorization: `Bearer ${token}` },
-                // Add a revalidation time to cache the data on the server
-                next: { revalidate: 30 } 
+                cache: 'no-store'
             });
 
             if (res.ok) {
@@ -40,9 +38,6 @@ async function StatsLoader() {
                 const oneWeekAgo = new Date();
                 oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
                 stats.pasesSemana = data.filter((d: any) => d.fecha_emision && new Date(d.fecha_emision) >= oneWeekAgo).length;
-                
-                const destinos = new Set(data.map((d: any) => d.destino?.id).filter(Boolean));
-                stats.destinosActivos = destinos.size;
             }
         } catch (e) {
             console.error("Failed to fetch stats", e);

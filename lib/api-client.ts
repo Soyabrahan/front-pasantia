@@ -37,8 +37,10 @@ export async function apiRequest<T>(
         const errorData = await response.json().catch(() => ({}));
         if (response.status === 401) {
             console.warn("Error de autenticación: El token ha expirado o no es válido.");
-            // Podrías redirigir al login aquí si fuera necesario
-            // window.location.href = '/login';
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('auth_token');
+                window.location.href = '/login';
+            }
         }
         throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
     }

@@ -8,8 +8,10 @@ export interface MaterialItem {
   id: string
   cantidad: string
   unidad: string
-  descripcion: string
-  fmos: string // Comma-separated FMOs/Serials
+  marca: string
+  producto: string
+  tipoIdentificador: string
+  identificadores: string
 }
 
 
@@ -26,8 +28,10 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
       id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 11),
       cantidad: "",
       unidad: "Und",
-      descripcion: "",
-      fmos: "",
+      marca: "",
+      producto: "",
+      tipoIdentificador: "Serial",
+      identificadores: "",
     }
     onItemsChange([...items, newItem])
   }
@@ -65,20 +69,26 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
       <div className="border-2 border-slate-400 rounded-lg overflow-hidden bg-card">
         {/* Table Header */}
         <div className="grid grid-cols-12 gap-2 p-3 bg-muted border-b-2 border-slate-400">
-          <div className="col-span-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="col-span-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Cant.
           </div>
-          <div className="col-span-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="col-span-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Unidad
           </div>
-          <div className="col-span-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Descripción (Producto)
+          <div className="col-span-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Marca
           </div>
           <div className="col-span-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            FMOs / Seriales
+            Producto
+          </div>
+          <div className="col-span-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Ingresar Por
+          </div>
+          <div className="col-span-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Valores
           </div>
           <div className="col-span-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">
-
+            
           </div>
         </div>
 
@@ -97,21 +107,21 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
                 className="grid grid-cols-12 gap-2 p-3 items-center hover:bg-muted/50 transition-colors animate-slideInLeft"
                 style={{ animationDelay: `${index * 50}ms`, animationFillMode: "both" }}
               >
-                <div className="col-span-3">
+                <div className="col-span-1">
                   <Input
                     type="number"
                     placeholder="0"
                     value={item.cantidad}
                     onChange={(e) => updateItem(item.id, "cantidad", e.target.value)}
-                    className="h-9 text-center border-slate-400"
+                    className="h-9 text-center border-slate-400 px-1"
                     min="0"
                   />
                 </div>
-                <div className="col-span-3">
+                <div className="col-span-2">
                   <select
                     value={item.unidad}
                     onChange={(e) => updateItem(item.id, "unidad", e.target.value)}
-                    className="w-full h-9 px-3 rounded-md border-2 border-slate-400 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full h-9 px-2 rounded-md border-2 border-slate-400 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     {UNIDADES.map((u) => (
                       <option key={u} value={u}>
@@ -120,20 +130,40 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
                     ))}
                   </select>
                 </div>
-                <div className="col-span-3">
+                <div className="col-span-2">
                   <Input
-                    placeholder="Marca, detalles..."
-                    value={item.descripcion}
-                    onChange={(e) => updateItem(item.id, "descripcion", e.target.value)}
+                    placeholder="Ej. Lenovo"
+                    value={item.marca}
+                    onChange={(e) => updateItem(item.id, "marca", e.target.value)}
                     className="h-9 border-slate-400"
                   />
                 </div>
                 <div className="col-span-2">
                   <Input
-                    placeholder="FMO-1, FMO-2..."
-                    value={item.fmos}
-                    onChange={(e) => updateItem(item.id, "fmos", e.target.value)}
+                    placeholder="Ej. Teclado"
+                    value={item.producto}
+                    onChange={(e) => updateItem(item.id, "producto", e.target.value)}
+                    className="h-9 border-slate-400"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <select
+                    value={item.tipoIdentificador}
+                    onChange={(e) => updateItem(item.id, "tipoIdentificador", e.target.value)}
+                    className="w-full h-9 px-2 rounded-md border-2 border-slate-400 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="Serial">Serial</option>
+                    <option value="FMO">FMO</option>
+                    <option value="S/N">Ninguno</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <Input
+                    placeholder="Separe mediante comas"
+                    value={item.identificadores}
+                    onChange={(e) => updateItem(item.id, "identificadores", e.target.value)}
                     className="h-9 border-slate-400 font-mono text-xs"
+                    disabled={item.tipoIdentificador === "S/N"}
                   />
                 </div>
                 <div className="col-span-1 text-center">

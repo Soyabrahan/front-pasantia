@@ -5,8 +5,8 @@ import { CheckCircle2, FileText, Calendar as CalendarIcon, Truck } from "lucide-
 
 export function DashboardStatsSkeleton() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      {[1, 2, 3, 4].map((i) => (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      {[1, 2, 3].map((i) => (
         <Card key={i} className="overflow-hidden border-slate-200/50 shadow-sm relative isolate bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">

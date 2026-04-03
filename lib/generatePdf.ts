@@ -74,10 +74,20 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
         y: number,
         fontSize: number = 8,
         fontStyle: 'normal' | 'bold' = 'normal',
-        align: 'left' | 'center' | 'right' = 'left'
+        align: 'left' | 'center' | 'right' = 'left',
+        maxW: number = 0
     ) => {
+        let finalSize = fontSize;
+        if (maxW > 0 && text) {
+            doc.setFont('helvetica', fontStyle);
+            doc.setFontSize(fontSize);
+            const currentW = doc.getTextWidth(String(text));
+            if (currentW > maxW) {
+                finalSize = Math.max(4, fontSize * (maxW / currentW));
+            }
+        }
         doc.setFont('helvetica', fontStyle);
-        doc.setFontSize(fontSize);
+        doc.setFontSize(finalSize);
         doc.setTextColor(0);
         doc.text(String(text || ''), x, y, { align });
     };
@@ -267,10 +277,11 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT(formData.fichaDespachador, fic2X + 1.5, row4Y + 8.5, 8);
 
     drawT('CARGO:', carX + 1.5, row4Y + 3.5, 7, 'bold');
-    drawT(formData.cargo, carX + 1.5, row4Y + 8.5, 8);
+    const cargoDespachador = formData.cargo || '';
+    drawT(cargoDespachador, carX + 1.5, row4Y + 8.5, 8, 'normal', 'left', 28);
 
     drawT('DEPARTAMENTO:', depX + 1.5, row4Y + 3.5, 5, 'bold');
-    drawT(formData.departamento, depX + 1.5, row4Y + 8.5, 8);
+    drawT(formData.departamento, depX + 1.5, row4Y + 8.5, 8, 'normal', 'left', 22);
 
     // Row 5: OBSERVACIONES | DIRIGIDO A | SOLICITUD
     const row5Y = row4Y + rowH;
@@ -284,17 +295,27 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT('DIRIGIDO A:', dirX + 1.5, row5Y + 4, 8, 'bold');
     drawT('SOLICITUD:', solX + 1.5, row5Y + 4, 8, 'bold');
 
-    // SOLICITANTE / USUARIO INFO
     // Format: USUARIO: NOMBRE F-FICHA CARGO DE DEPARTAMENTO
+    // Moved to the same vertical level as Dirigido A and Solicitud per user request
     if (formData.solicitante) {
         const usuarioText = `USUARIO: ${formData.solicitante.toUpperCase()} F-${formData.fichaSolicitante || ''} ${formData.cargoSolicitante?.toUpperCase() || ''} DE ${formData.departamentoSolicitante?.toUpperCase() || ''}`;
-        drawT(usuarioText, rightX + 18, row5Y + 12, 7, 'bold');
+        drawT(usuarioText, rightX + 1.5, row5Y + 11, 6, 'bold', 'left', dirX - rightX - 3);
+    }
+
+    // Actual observations and Directed To data
+    // If we have manual observations (dirigidoA), we might overlap, but following user's specific alignment request
+    if (formData.dirigidoA) {
+        // If there's already a solicitante, we might want to shift this or just respect the maxW
+        drawT(formData.dirigidoA, rightX + 1.5, row5Y + 15, 6, 'normal', 'left', dirX - rightX - 3);
+    }
+    if (formData.embarqueseA) {
+        drawT(formData.embarqueseA, dirX + 1.5, row5Y + 11, 6.5, 'bold', 'left', solX - dirX - 3);
     }
 
     // SOLICITUD value (Concept + Solicitud Text)
     const solicitudFull = `${formData.conceptoNombre || ''} ${formData.solicitud || ''}`.trim().toUpperCase();
     if (solicitudFull) {
-        drawT(solicitudFull, solX + 1.5, row5Y + 12, 8, 'bold');
+        drawT(solicitudFull, solX + 1.5, row5Y + 11, 6.5, 'bold', 'left', (margin + contentW) - solX - 3);
     }
 
     // --- Bottom-Left: Auth Area (Inside Border) ---
@@ -304,7 +325,8 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT(formData.autorizadoPor || 'CARMEN MÁRQUEZ', margin + 25, authY + 4, 8, 'bold');
 
     drawT('CARGO:', margin + 1.5, authY + 11, 6, 'bold');
-    drawT(formData.cargoAutorizador || 'GERENTE DE TELEMÁTICA (e)', margin + 15, authY + 11, 7.5, 'bold');
+    const cargoAutorizador = formData.cargoAutorizador || 'GERENTE DE TELEMÁTICA (e)';
+    drawT(cargoAutorizador, margin + 15, authY + 11, cargoAutorizador.length > 25 ? 5.5 : 7.5, 'bold');
 
     drawT('FIRMA Y SELLO:', margin + 1.5, authY + 19, 6, 'bold');
 
