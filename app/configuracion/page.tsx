@@ -465,27 +465,20 @@ export default function ConfigurationPage() {
                                                     {isAddingUsuario && (
                                                         <TableRow className="bg-primary/5">
                                                             <TableCell>
-                                                                <Select onValueChange={(val) => {
-                                                                    const emp = empleados.find(e => e.ficha === val)
-                                                                    if (emp) {
+                                                                <Input 
+                                                                    placeholder="Ficha..." 
+                                                                    className="h-8 text-xs"
+                                                                    value={newUsuario.ficha}
+                                                                    onChange={(e) => {
+                                                                        const ficha = e.target.value;
+                                                                        const emp = empleados.find(emp => emp.ficha === ficha);
                                                                         setNewUsuario({
                                                                             ...newUsuario,
-                                                                            ficha: emp.ficha,
-                                                                            nombre: emp.nombre,
-                                                                            rol: "Usuario",
-                                                                            contrasena: "0000"
-                                                                        })
-                                                                    }
-                                                                }}>
-                                                                    <SelectTrigger className="h-8 text-xs">
-                                                                        <SelectValue placeholder="Elegir empleado..." />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {empleados.filter(e => !usuarios.some(u => u.ficha === e.ficha)).map(e => (
-                                                                            <SelectItem key={e.id} value={e.ficha}>{e.nombre} ({e.ficha})</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
+                                                                            ficha,
+                                                                            nombre: emp ? emp.nombre : ""
+                                                                        });
+                                                                    }}
+                                                                />
                                                                 {newUsuario.ficha && (
                                                                     <div className="mt-2 p-2 bg-background/50 rounded border border-transparent">
                                                                         <div className="text-[10px] font-bold text-primary">{newUsuario.nombre}</div>
