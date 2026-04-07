@@ -279,7 +279,6 @@ export default function MaterialPassPage() {
       { field: 'despachadoPor', name: 'Material Despachado Por' },
       { field: 'fichaDespachador', name: 'Ficha Despachador' },
       { field: 'solicitante', name: 'Solicitante' },
-      { field: 'solicitud', name: 'Solicitud' },
     ];
 
     const missingFields = requiredFields.filter(rf => !formData[rf.field as keyof typeof formData]);
@@ -319,7 +318,7 @@ export default function MaterialPassPage() {
       vehiculoId: formData.vehiculoId,
       observaciones: formData.observaciones,
       tiempo_estimado: formData.tiempoEstimado,
-      solicitud: formData.solicitud,
+      solicitud: formData.conceptoOpcion,
       equipos: items.map((item) => {
         const rawValues = item.identificadores ? item.identificadores.split(',').map(f => f.trim()).filter(f => f !== "") : [];
         const isFMO = item.tipoIdentificador === "FMO";
@@ -371,7 +370,7 @@ export default function MaterialPassPage() {
         fichaDespachador: formData.fichaDespachador,
         despachadoPor: formData.despachadoPor,
         dirigidoA: formData.observaciones,
-        solicitud: formData.solicitud,
+        solicitud: formData.conceptoOpcion,
         conceptoNombre: formData.conceptoOpcion,
         solicitante: formData.solicitante,
         fichaSolicitante: formData.fichaSolicitante,
@@ -1256,62 +1255,7 @@ export default function MaterialPassPage() {
             </CardContent>
           </Card>
 
-          {/* Observations & Others */}
-          <Card className="border-slate-300">
-            <CardHeader className="pb-3 border-b border-slate-300">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                Detalles Adicionales
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
 
-              <div className="space-y-2">
-                <Label>Solicitud (Motivo):</Label>
-                <Select
-                  value={formData.solicitud}
-                  onValueChange={(val) => handleInputChange("solicitud", val)}
-                >
-                  <SelectTrigger className="border-slate-400">
-                    <SelectValue placeholder="Seleccione el motivo..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[
-                      "DONACION",
-                      "DEVOLUCION",
-                      "PRESTAMO",
-                      "REPARACION",
-                      "REVISION",
-                      "VENDIDO",
-                      "FORANEO",
-                    ].map((opcion) => (
-                      <SelectItem key={opcion} value={opcion}>
-                        {opcion}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Detected Tags */}
-                {(extractedData.ficha || extractedData.fmo) && (
-                  <div className="flex gap-2 animate-fadeIn">
-                    {extractedData.ficha && (
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
-                        <User className="h-3 w-3" />
-                        Ficha: {extractedData.ficha}
-                      </div>
-                    )}
-                    {extractedData.fmo && (
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium border border-purple-200">
-                        <Monitor className="h-3 w-3" />
-                        FMO: {extractedData.fmo}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Authorization - Static */}
           <Card className="bg-muted/30">
