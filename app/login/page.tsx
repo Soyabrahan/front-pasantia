@@ -29,7 +29,7 @@ export default function LoginPage() {
         ficha: formData.username,
         contrasena: formData.password
       })
-      
+
       if (response.access_token) {
         localStorage.setItem("auth_token", response.access_token)
         document.cookie = `auth_token=${response.access_token}; path=/; max-age=86400; SameSite=Lax`
@@ -93,9 +93,6 @@ export default function LoginPage() {
                     <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
                       Contraseña
                     </Label>
-                    <Link href="#" className="text-[10px] font-bold text-[#CC1414] hover:underline uppercase tracking-widest">
-                      ¿Olvidó su contraseña?
-                    </Link>
                   </div>
                   <div className="relative group">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-600 group-focus-within:text-[#CC1414] transition-colors" />
@@ -120,17 +117,17 @@ export default function LoginPage() {
               </div>
 
               <div className="flex items-center space-x-3 px-1">
-                <Checkbox id="remember" className="rounded-md border-zinc-700 data-[state=checked]:bg-[#CC1414] data-[state=checked]:border-[#CC1414]" />
+
                 <label
                   htmlFor="remember"
                   className="text-xs font-medium text-zinc-400 leading-none cursor-pointer"
                 >
-                  Recordarme en este equipo
+
                 </label>
               </div>
 
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full bg-[#CC1414] hover:bg-[#A11010] text-white font-black h-14 rounded-2xl transition-all shadow-lg shadow-red-900/20 active:scale-[0.98] disabled:opacity-50"
                 disabled={loading}
               >
