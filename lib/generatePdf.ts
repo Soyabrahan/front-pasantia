@@ -151,11 +151,11 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     const rightX = margin + leftColW;
 
     // Define authY early to avoid ReferenceError
-    const authY = midY + 40; 
+    const authY = midY + 40;
     const midH = authY - midY + 40; // Total height of mid section (including auth)
 
     // Main Vertical Divider (Between Left/Right)
-    doc.line(rightX, midY, rightX, midY + 74); 
+    doc.line(rightX, midY, rightX, midY + 74);
 
     // --- LEFT COLUMN (Concept + Auth) ---
     // Header "CONCEPTO:"
@@ -188,7 +188,7 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     const timeBoxW = 40;
     drawT('Tiempo estimado de', timeBoxX + timeBoxW / 2, timeBoxY + 1, 6, 'normal', 'center');
     drawT('Regreso a la Empresa', timeBoxX + timeBoxW / 2, timeBoxY + 4, 6, 'normal', 'center');
-    
+
     // Lines for Return Time
     doc.line(timeBoxX + 10, timeBoxY + 11, timeBoxX + timeBoxW - 5, timeBoxY + 11);
     doc.line(timeBoxX + 10, timeBoxY + 14.5, timeBoxX + timeBoxW - 5, timeBoxY + 14.5);
@@ -200,18 +200,18 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
 
     // --- DATA FIELDS (Right Column Rows) ---
     const rowH = 10;
-    
+
     // Row 1: EMBÁRQUESE A | N.º ORDEN DE COMPRA
     const row1Y = midY;
     const ordenX = margin + contentW - 40;
     doc.line(rightX, row1Y + rowH, margin + contentW, row1Y + rowH);
     doc.line(ordenX, row1Y, ordenX, row1Y + rowH);
-    
+
     drawT('EMBÁRQUESE A:', rightX + 1.5, row1Y + 3.5, 6.5, 'bold');
-    drawT(formData.embarqueseA, rightX + 1.5, row1Y + 8.5, 8);
-    
+    drawT(formData.embarqueseA, rightX + 1.5, row1Y + 8.5, 8, 'normal', 'left', (ordenX - rightX) - 3);
+
     drawT('N.º ORDEN DE COMPRA:', ordenX + 1.5, row1Y + 3.5, 6, 'bold');
-    drawT(formData.ordenCompra || '----', ordenX + 1.5, row1Y + 8.5, 8);
+    drawT(formData.ordenCompra || '----', ordenX + 1.5, row1Y + 8.5, 8, 'normal', 'left', (margin + contentW - ordenX) - 3);
 
     // Row 2: DIRECCIÓN | TELÉFONO | CONTADO | CRÉDITO
     const row2Y = row1Y + rowH;
@@ -225,14 +225,14 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     doc.line(credX, row2Y, credX, row2Y + rowH);
 
     drawT('DIRECCIÓN:', rightX + 1.5, row2Y + 3.5, 6.5, 'bold');
-    drawT(formData.direccion, rightX + 1.5, row2Y + 8.5, 7.5);
+    drawT(formData.direccion, rightX + 1.5, row2Y + 8.5, 7.5, 'normal', 'left', (telX - rightX) - 3);
 
     drawT('TELÉFONO:', telX + 1.5, row2Y + 3.5, 6.5, 'bold');
-    drawT(formData.telefono, telX + 1.5, row2Y + 8.5, 8);
+    drawT(formData.telefono, telX + 1.5, row2Y + 8.5, 8, 'normal', 'left', (contX - telX) - 3);
 
     drawT('CONTADO:', contX + 1.5, row2Y + 3.5, 5.5, 'bold');
     doc.line(contX + 1, row2Y + 7.5, contX + 16, row2Y + 7.5, 'FD'); // Dashed look
-    
+
     drawT('CRÉDITO:', credX + 1.5, row2Y + 3.5, 5.5, 'bold');
     doc.line(credX + 1, row2Y + 7.5, credX + 16, row2Y + 7.5, 'FD');
 
@@ -241,23 +241,23 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     const ficX = rightX + (rightColW * 0.45);
     const fmoX = rightX + (rightColW * 0.72);
     const partX = rightX + (rightColW * 0.88);
-    
+
     doc.line(rightX, row3Y + rowH, margin + contentW, row3Y + rowH);
     doc.line(ficX, row3Y, ficX, row3Y + rowH);
     doc.line(fmoX, row3Y, fmoX, row3Y + rowH);
     doc.line(partX, row3Y, partX, row3Y + rowH);
 
     drawT('CONDUCTOR:', rightX + 1.5, row3Y + 3.5, 6.5, 'bold');
-    drawT(formData.conductor, rightX + 1.5, row3Y + 8.5, 8);
+    drawT(formData.conductor, rightX + 1.5, row3Y + 8.5, 8, 'normal', 'left', (ficX - rightX) - 3);
 
     drawT('FICHA O CÉDULA DE IDENTIDAD:', ficX + 1.5, row3Y + 3.5, 6, 'bold');
-    drawT(formData.fichaConductor, ficX + 1.5, row3Y + 8.5, 8);
+    drawT(formData.fichaConductor, ficX + 1.5, row3Y + 8.5, 8, 'normal', 'left', (fmoX - ficX) - 3);
 
     drawT('VEHICULO F.M.O.', fmoX + 1.5, row3Y + 3.5, 6, 'bold');
-    drawT(formData.vehiculoFmo, fmoX + 1.5, row3Y + 8.5, 8);
+    drawT(formData.vehiculoFmo, fmoX + 1.5, row3Y + 8.5, 8, 'normal', 'left', (partX - fmoX) - 3);
 
     drawT('VEHÍCULO PARTIC.:', partX + 1.5, row3Y + 3.5, 6, 'bold');
-    drawT(formData.vehiculoParticular, partX + 1.5, row3Y + 8.5, 8);
+    drawT(formData.vehiculoParticular, partX + 1.5, row3Y + 8.5, 8, 'normal', 'left', (margin + contentW - partX) - 3);
 
     // Row 4: MATERIAL DESPACHADO POR | FICHA | CARGO | DEP
     const row4Y = row3Y + rowH;
@@ -271,17 +271,17 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     doc.line(depX, row4Y, depX, row4Y + rowH);
 
     drawT('MATERIAL DESPACHADO POR:', rightX + 1.5, row4Y + 3.5, 6.5, 'bold');
-    drawT(formData.despachadoPor, rightX + 1.5, row4Y + 8.5, 8);
+    drawT(formData.despachadoPor, rightX + 1.5, row4Y + 8.5, 8, 'normal', 'left', (fic2X - rightX) - 3);
 
     drawT('FICHA:', fic2X + 1.5, row4Y + 3.5, 7, 'bold');
-    drawT(formData.fichaDespachador, fic2X + 1.5, row4Y + 8.5, 8);
+    drawT(formData.fichaDespachador, fic2X + 1.5, row4Y + 8.5, 8, 'normal', 'left', (carX - fic2X) - 3);
 
     drawT('CARGO:', carX + 1.5, row4Y + 3.5, 7, 'bold');
     const cargoDespachador = formData.cargo || '';
-    drawT(cargoDespachador, carX + 1.5, row4Y + 8.5, 8, 'normal', 'left', 28);
+    drawT(cargoDespachador, carX + 1.5, row4Y + 8.5, 8, 'normal', 'left', (depX - carX) - 3);
 
     drawT('DEPARTAMENTO:', depX + 1.5, row4Y + 3.5, 5, 'bold');
-    drawT(formData.departamento, depX + 1.5, row4Y + 8.5, 8, 'normal', 'left', 22);
+    drawT(formData.departamento, depX + 1.5, row4Y + 8.5, 8, 'normal', 'left', (margin + contentW - depX) - 3);
 
     // Row 5: OBSERVACIONES | DIRIGIDO A | SOLICITUD
     const row5Y = row4Y + rowH;
@@ -299,7 +299,7 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     // Moved to the same vertical level as Dirigido A and Solicitud per user request
     if (formData.solicitante) {
         const usuarioText = `USUARIO: ${formData.solicitante.toUpperCase()} F-${formData.fichaSolicitante || ''} ${formData.cargoSolicitante?.toUpperCase() || ''} DE ${formData.departamentoSolicitante?.toUpperCase() || ''}`;
-        drawT(usuarioText, rightX + 1.5, row5Y + 11, 6, 'bold', 'left', dirX - rightX - 3);
+        drawT(usuarioText, rightX + 1.5, row5Y + 11, 5.5, 'bold', 'left', (dirX - rightX) - 5);
     }
 
     // Actual observations and Directed To data
@@ -320,7 +320,7 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
 
     // --- Bottom-Left: Auth Area (Inside Border) ---
     doc.line(margin, authY, rightX, authY);
-    
+
     drawT('AUTORIZADO POR:', margin + 1.5, authY + 4, 6, 'bold');
     drawT(formData.autorizadoPor || 'CARMEN MÁRQUEZ', margin + 25, authY + 4, 8, 'bold');
 
@@ -333,10 +333,10 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT('FICHA:', margin + 1.5, authY + 28, 6, 'bold');
     drawT(formData.fichaAutorizador || '15508', margin + 12, authY + 28, 8, 'bold');
 
-    drawT('LUGAR Y FECHA DE EMISIÓN:', margin + 1.5, authY + 34, 5.5, 'bold');
+    drawT('LUGAR Y FECHA DE EMISIÓN:', margin + 1.5, authY + 33.5, 5.5, 'bold');
     const today = new Date();
     const formattedDate = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
-    drawT(`PUERTO ORDAZ, ${formattedDate}`, margin + 35, authY + 34, 6.5, 'bold');
+    drawT(`PUERTO ORDAZ, ${formattedDate}`, margin + 35, authY + 33.5, 6.5, 'bold', 'left', (rightX - margin - 35) - 3);
 
     // ============================================
     // BOTTOM SECTION (Table + Proteccion)
@@ -360,47 +360,47 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT('CANTIDAD', margin + 7.5, tableY + 6, 7, 'bold', 'center');
     drawT('UNIDAD', margin + 25, tableY + 6, 7, 'bold', 'center');
     drawT('DESCRIPCIÓN (INCLUYA MARCA Y SERIAL)', margin + 37, tableY + 6, 7, 'bold');
-    
-    drawT('DEPARTAMENTO DE PROTECCIÓN INDUSTRIAL', margin + matW + (sigW/4), tableY + 4.5, 5, 'bold', 'center');
-    drawT('DEPARTAMENTO DE PROTECCIÓN DE BUQUES E', sigMidX + (sigW/4), tableY + 4, 5, 'bold', 'center');
-    drawT('INSTALACIONES PORTUARIAS', sigMidX + (sigW/4), tableY + 7, 5, 'bold', 'center');
+
+    drawT('DEPARTAMENTO DE PROTECCIÓN INDUSTRIAL', margin + matW + (sigW / 4), tableY + 4.5, 5, 'bold', 'center');
+    drawT('DEPARTAMENTO DE PROTECCIÓN DE BUQUES E', sigMidX + (sigW / 4), tableY + 4, 5, 'bold', 'center');
+    drawT('INSTALACIONES PORTUARIAS', sigMidX + (sigW / 4), tableY + 7, 5, 'bold', 'center');
 
     // Table Rows (6 rows)
     let ry = tableY + tableHeaderH;
     for (let i = 0; i < 6; i++) {
         ry += 9.6; // Proportional row height
         if (i < 5) doc.line(margin, ry, margin + matW, ry);
-        
+
         if (items[i]) {
             drawT(String(items[i].cantidad), margin + 7.5, ry - 4, 8, 'normal', 'center');
             drawT(items[i].unidad, margin + 25, ry - 4, 8, 'normal', 'center');
-            
-            const fullDesc = items[i].fmos 
-                ? `${items[i].descripcion} S/N: ${items[i].fmos}`
+
+            const fullDesc = items[i].fmos
+                ? `${items[i].descripcion}  ${items[i].fmos}`
                 : items[i].descripcion;
-                
-            drawT(fullDesc, margin + 37, ry - 4, 8);
+
+            drawT(fullDesc, margin + 37, ry - 4, 8, 'normal', 'left', (matW - 37 + margin) - 2);
         }
     }
 
     // Protection Sub-sections
     const drawProtBlock = (startX: number, blockW: number) => {
         let by = tableY + tableHeaderH;
-        
+
         // Salida
         drawT('SALIDA REVISADA POR:', startX + 1.5, by + 4, 5, 'bold');
         doc.line(startX, by + 6, startX + blockW, by + 6);
         by += 6;
-        
+
         drawT('N.º FICHA:', startX + 1.5, by + 4, 4.5);
-        drawT('FECHA:', startX + blockW*(1/4) + 1.5, by + 4, 4.5);
-        drawT('HORA:', startX + blockW*(2/3) + 1.5, by + 4, 4.5);
-        
-        doc.line(startX + blockW*(1/4), by, startX + blockW*(1/4), by + 6);
-        doc.line(startX + blockW*(2/3), by, startX + blockW*(2/3), by + 6);
+        drawT('FECHA:', startX + blockW * (1 / 4) + 1.5, by + 4, 4.5);
+        drawT('HORA:', startX + blockW * (2 / 3) + 1.5, by + 4, 4.5);
+
+        doc.line(startX + blockW * (1 / 4), by, startX + blockW * (1 / 4), by + 6);
+        doc.line(startX + blockW * (2 / 3), by, startX + blockW * (2 / 3), by + 6);
         doc.line(startX, by + 6, startX + blockW, by + 6);
         by += 6;
-        
+
         drawT('PORTÓN No.', startX + 1.5, by + 5, 5, 'bold');
         doc.line(startX + 18, by + 5, startX + blockW - 5, by + 5);
         doc.line(startX, by + 9, startX + blockW, by + 9);
@@ -410,13 +410,13 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
         drawT('ENTRADA REVISADA POR:', startX + 1.5, by + 4, 5, 'bold');
         doc.line(startX, by + 6, startX + blockW, by + 6);
         by += 6;
-        
+
         drawT('N.º FICHA:', startX + 1.5, by + 4, 4.5);
-        drawT('FECHA:', startX + blockW*(1/4) + 1.5, by + 4, 4.5);
-        drawT('HORA:', startX + blockW*(2/3) + 1.5, by + 4, 4.5);
-        
-        doc.line(startX + blockW*(1/4), by, startX + blockW*(1/4), by + 6);
-        doc.line(startX + blockW*(2/3), by, startX + blockW*(2/3), by + 6);
+        drawT('FECHA:', startX + blockW * (1 / 4) + 1.5, by + 4, 4.5);
+        drawT('HORA:', startX + blockW * (2 / 3) + 1.5, by + 4, 4.5);
+
+        doc.line(startX + blockW * (1 / 4), by, startX + blockW * (1 / 4), by + 6);
+        doc.line(startX + blockW * (2 / 3), by, startX + blockW * (2 / 3), by + 6);
         doc.line(startX, by + 6, startX + blockW, by + 6);
         by += 6;
 
@@ -424,8 +424,8 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
         doc.line(startX + 18, by + 5, startX + blockW - 5, by + 5);
     };
 
-    drawProtBlock(margin + matW, sigW/2);
-    drawProtBlock(sigMidX, sigW/2);
+    drawProtBlock(margin + matW, sigW / 2);
+    drawProtBlock(sigMidX, sigW / 2);
 
     // ============================================
     // FOOTER (Warning & Checks)
