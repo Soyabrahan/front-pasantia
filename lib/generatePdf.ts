@@ -289,7 +289,7 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     const solX = margin + contentW - 45;
     const dirX = rightX + (rightColW * 0.45);
 
-    doc.line(rightX, row5Y + row5H, margin + contentW, row5Y + row5H);
+    // doc.line(rightX, row5Y + row5H, margin + contentW, row5Y + row5H); // Removed redundant horizontal line causing overlap in observations
 
     drawT('Observaciones:', rightX + 1.5, row5Y + 4, 8, 'bold');
     drawT('DIRIGIDO A:', dirX + 1.5, row5Y + 4, 8, 'bold');
@@ -313,7 +313,13 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     }
 
     // SOLICITUD value (Concept + Solicitud Text)
-    const solicitudFull = `${formData.conceptoNombre || ''} ${formData.solicitud || ''}`.trim().toUpperCase();
+    // Avoid doubling if they are the same
+    const concept = formData.conceptoNombre || '';
+    const detail = formData.solicitud || '';
+    const solicitudFull = (concept.trim().toUpperCase() === detail.trim().toUpperCase()) 
+        ? concept.toUpperCase() 
+        : `${concept} ${detail}`.trim().toUpperCase();
+
     if (solicitudFull) {
         drawT(solicitudFull, solX + 1.5, row5Y + 11, 6.5, 'bold', 'left', (margin + contentW) - solX - 3);
     }
@@ -348,15 +354,7 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     const sigW = contentW - matW;
     const sigMidX = margin + matW + (sigW / 2);
 
-    rect(margin, tableY, contentW, tableTotalH);
-    doc.line(margin, tableY + tableHeaderH, margin + contentW, tableY + tableHeaderH);
-
-    // Table Column Dividers
-    doc.line(margin + 15, tableY, margin + 15, tableY + tableTotalH);
-    doc.line(margin + 35, tableY, margin + 35, tableY + tableTotalH);
-    doc.line(margin + matW, tableY, margin + matW, tableY + tableTotalH);
-    doc.line(sigMidX, tableY, sigMidX, tableY + tableTotalH);
-
+    // Table Headers
     drawT('CANTIDAD', margin + 7.5, tableY + 6, 7, 'bold', 'center');
     drawT('UNIDAD', margin + 25, tableY + 6, 7, 'bold', 'center');
     drawT('DESCRIPCIÓN (INCLUYA MARCA Y SERIAL)', margin + 37, tableY + 6, 7, 'bold');
@@ -365,23 +363,60 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT('DEPARTAMENTO DE PROTECCIÓN DE BUQUES E', sigMidX + (sigW / 4), tableY + 4, 5, 'bold', 'center');
     drawT('INSTALACIONES PORTUARIAS', sigMidX + (sigW / 4), tableY + 7, 5, 'bold', 'center');
 
-    // Table Rows (6 rows)
+    // Dynamic Table Logic
     let ry = tableY + tableHeaderH;
+    const itemsToShow = items.slice(0, 6); // Keep limit for safety of single page
+
     for (let i = 0; i < 6; i++) {
-        ry += 9.6; // Proportional row height
-        if (i < 5) doc.line(margin, ry, margin + matW, ry);
+        const item = itemsToShow[i];
+        let rowH = 9.6; // Minimum row height
+        const startX = margin + 35;
+        const endX = margin + matW;
+        const colW = (endX - startX) - 4; // Absolute width minus padding
+        let lines: string[] = [];
 
-        if (items[i]) {
-            drawT(String(items[i].cantidad), margin + 7.5, ry - 4, 8, 'normal', 'center');
-            drawT(items[i].unidad, margin + 25, ry - 4, 8, 'normal', 'center');
-
-            const fullDesc = items[i].fmos
-                ? `${items[i].descripcion}  ${items[i].fmos}`
-                : items[i].descripcion;
-
-            drawT(fullDesc, margin + 37, ry - 4, 8, 'normal', 'left', (matW - 37 + margin) - 2);
+        if (item) {
+            const fullDesc = item.fmos
+                ? `${item.descripcion}  ${item.fmos}`
+                : item.descripcion;
+            
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            lines = doc.splitTextToSize(fullDesc, colW);
+            
+            // Adjust row height if description is too long
+            const lineHeight = 3.5;
+            const calculatedH = (lines.length * lineHeight) + 6; // More vertical padding
+            if (calculatedH > rowH) rowH = calculatedH;
         }
+
+        // Horizontal Line for this row block
+        if (i < 5) doc.line(margin, ry + rowH, margin + matW, ry + rowH);
+        
+        if (item && lines.length > 0) {
+            // Draw Quantity and Unit (centered in height)
+            drawT(String(item.cantidad), margin + 7.5, ry + (rowH / 2) + 1.5, 8, 'normal', 'center');
+            drawT(item.unidad, margin + 25, ry + (rowH / 2) + 1.5, 8, 'normal', 'center');
+
+            // Draw Description (multi-line)
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.text(lines, margin + 37, ry + 5);
+        }
+
+        ry += rowH;
     }
+
+    const tableEnd = ry;
+    const finalTableH = tableEnd - tableY;
+
+    // Redraw Rect and Vertical Dividers with final height
+    rect(margin, tableY, contentW, finalTableH);
+    doc.line(margin, tableY + tableHeaderH, margin + contentW, tableY + tableHeaderH);
+    doc.line(margin + 15, tableY, margin + 15, tableEnd);
+    doc.line(margin + 35, tableY, margin + 35, tableEnd);
+    doc.line(margin + matW, tableY, margin + matW, tableEnd);
+    doc.line(sigMidX, tableY, sigMidX, tableEnd);
 
     // Protection Sub-sections
     const drawProtBlock = (startX: number, blockW: number) => {
@@ -427,10 +462,13 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawProtBlock(margin + matW, sigW / 2);
     drawProtBlock(sigMidX, sigW / 2);
 
+    // Move Proteccion final bottom border
+    doc.line(margin + matW, tableEnd, margin + contentW, tableEnd);
+
     // ============================================
     // FOOTER (Warning & Checks)
     // ============================================
-    const footerY = tableY + tableTotalH + 3.5;
+    const footerY = tableEnd + 3.5;
     drawT('EL USUARIO DEBE NOTIFICAR LA ENTRADA DE MATERIAL O EQUIPOS A LA SECCIÓN', margin + 1.5, footerY, 6, 'bold');
     drawT('DE PROTECCIÓN INDUSTRIAL.', margin + 1.5, footerY + 3, 6, 'bold');
 

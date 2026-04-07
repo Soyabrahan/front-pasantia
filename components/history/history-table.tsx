@@ -459,7 +459,7 @@ export function HistoryTable() {
                                                     });
 
                                                     return Object.values(groups).map((g: any) => {
-                                                        const idStr = g.ids.length > 0 ? ` (${g.ids.join(", ")})` : "";
+                                                        const idStr = (g.cantidad <= 2 && g.ids.length > 0) ? ` (${g.ids.join(", ")})` : "";
                                                         return `${g.cantidad} ${g.nombre || ""}${g.marca ? ` ${g.marca}` : ""}${idStr}`;
                                                     }).join("; ");
                                                 })()
