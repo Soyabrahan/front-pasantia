@@ -126,7 +126,7 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     const lh = 15;
 
     try {
-        doc.addImage('/ferro.png', 'PNG', lx, ly, lw, lh);
+        doc.addImage('/logo-pdf.png', 'PNG', lx, ly, lw, lh);
     } catch (e) {
         doc.setFillColor(190, 30, 45);
         doc.rect(lx, ly, lw, lh, 'F');

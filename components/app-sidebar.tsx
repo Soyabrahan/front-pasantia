@@ -102,7 +102,7 @@ export function AppSidebar() {
             <SidebarHeader className="h-20 flex items-center justify-center pt-6 pb-2">
                 <div className="flex w-full items-center justify-center gap-2 overflow-hidden">
                     <div className="flex aspect-square size-[3rem] items-center justify-center shrink-0">
-                        <img src="/ferro.png" alt="Ferrominera Logo" className="w-full h-full object-contain" />
+                        <img src="/ferro.ico" alt="Ferrominera Logo" className="w-full h-full object-contain" />
                     </div>
                     <span className="truncate font-bold text-2xl tracking-widest group-data-[collapsible=icon]:hidden ml-2">
                         FMOPASES
