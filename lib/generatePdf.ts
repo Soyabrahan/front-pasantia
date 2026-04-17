@@ -442,14 +442,40 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawProtBlock(sigMidX, sigW / 2);
     doc.line(margin + matW, tableEnd, margin + contentW, tableEnd);
 
-    const footerY = tableEnd + 3.5;
-    drawT('EL USUARIO DEBE NOTIFICAR LA ENTRADA DE MATERIAL O EQUIPOS A LA SECCIÓN', margin + 1.5, footerY, 6, 'bold');
-    drawT('DE PROTECCIÓN INDUSTRIAL.', margin + 1.5, footerY + 3, 6, 'bold');
+    // ============================================
+    // BOTTOM SECTION (Footer/Notes)
+    // ============================================
+    const footerStartY = tableEnd;
+    const footerEndY = margin + contentH;
+    const footerH = footerEndY - footerStartY;
 
-    const checkX = margin + matW + 5;
-    drawT('✓  TODO VEHÍCULO DEBE SER INSPECCIONADO EN LOS PORTONES.', checkX, footerY, 5.5, 'normal');
-    drawT('✓  LOS ESPACIOS EN BLANCO NO APLICAN', checkX, footerY + 3.5, 5.5, 'normal');
-    drawT('✓  NO SE ACEPTAN ENMIENDAS', checkX, footerY + 7, 5.5, 'normal');
+    // Calculate vertical line position after first text line
+    const footerTextLeft1 = 'EL USUARIO DEBE NOTIFICAR LA ENTRADA DE MATERIAL O EQUIPOS A LA SECCIÓN';
+    const footerTextLeft2 = 'DE PROTECCIÓN INDUSTRIAL.';
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6);
+    const leftTextW = doc.getTextWidth(footerTextLeft1);
+    const lineX = margin + 1.5 + leftTextW + 2.5; // Padding after "SECCIÓN"
+
+    // Draw Vertical Separator Line
+    doc.setLineWidth(0.3);
+    doc.line(lineX, footerStartY, lineX, footerEndY);
+
+    // Reposition Left Text
+    drawT(footerTextLeft1, margin + 1.5, footerStartY + 3.5, 6, 'bold');
+    drawT(footerTextLeft2, margin + 1.5, footerStartY + 7, 6, 'bold');
+
+    // Reposition Right Text (Distributed Top, Middle, Bottom)
+    const bulletX = lineX + 2.5;
+    const bulletFontSize = 5.5;
+    
+    // Top
+    drawT('•  TODO VEHÍCULO DEBE SER INSPECCIONADO EN LOS PORTONES.', bulletX, footerStartY + 3.5, bulletFontSize, 'normal');
+    // Middle
+    drawT('•  LOS ESPACIOS EN BLANCO NO APLICAN', bulletX, footerStartY + (footerH / 2) + 1, bulletFontSize, 'normal');
+    // Bottom
+    drawT('•  NO SE ACEPTAN ENMIENDAS', bulletX, footerEndY - 3, bulletFontSize, 'normal');
 
     const pdfBlob = doc.output('blob');
     const url = URL.createObjectURL(pdfBlob);
