@@ -13,10 +13,11 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Search, Filter, Calendar as CalendarIcon, FileText, User, MapPin, Check, ChevronsUpDown } from "lucide-react";
+import { Search, Filter, Calendar as CalendarIcon, FileText, User, MapPin, Check, ChevronsUpDown, X, Pencil } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 import {
     Popover,
     PopoverContent,
@@ -30,6 +31,9 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface PaseRecord {
     id: string;
@@ -46,6 +50,7 @@ interface PaseRecord {
 }
 
 export function HistoryTable() {
+    const router = useRouter();
     const [data, setData] = useState<PaseRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [filters, setFilters] = useState({
@@ -53,14 +58,12 @@ export function HistoryTable() {
         equipo: "",
         persona: "",
         destino: "",
-        fechaInicio: "",
-        fechaFin: "",
+        fechaInicio: undefined as Date | undefined,
+        fechaFin: undefined as Date | undefined,
     });
 
     const [destinos, setDestinos] = useState<any[]>([]);
     const [empleados, setEmpleados] = useState<any[]>([]);
-    const [loadingDestinos, setLoadingDestinos] = useState(false);
-    const [loadingEmpleados, setLoadingEmpleados] = useState(false);
     const [openSolicitante, setOpenSolicitante] = useState(false);
     const [openDestino, setOpenDestino] = useState(false);
 
@@ -86,7 +89,7 @@ export function HistoryTable() {
         fetchInitialData();
     }, []);
 
-    const handleFilterChange = (key: string, value: string) => {
+    const handleFilterChange = (key: string, value: any) => {
         setFilters((prev) => ({ ...prev, [key]: value }));
     };
 
@@ -114,12 +117,15 @@ export function HistoryTable() {
                   )
                 : true;
 
+            const itemDate = new Date(item.fecha_emision);
+            itemDate.setHours(0, 0, 0, 0);
+
             const matchFechaInicio = filters.fechaInicio
-                ? item.fecha_emision >= filters.fechaInicio
+                ? itemDate >= filters.fechaInicio
                 : true;
 
             const matchFechaFin = filters.fechaFin
-                ? item.fecha_emision <= filters.fechaFin
+                ? itemDate <= filters.fechaFin
                 : true;
 
             return matchPase && matchPersona && matchDestino && matchEquipo && matchFechaInicio && matchFechaFin;
@@ -213,9 +219,9 @@ export function HistoryTable() {
     return (
         <div className="space-y-6">
             {/* Filters */}
-            <Card className="animate-in slide-in-from-bottom-4 duration-700 delay-100 fill-mode-both border-slate-200/60 shadow-sm">
-                <CardHeader className="pb-3 bg-slate-50/50">
-                    <CardTitle className="text-lg font-medium flex items-center gap-2 text-slate-700">
+            <Card className="animate-in slide-in-from-bottom-4 duration-700 delay-100 fill-mode-both border-border/40 bg-card/50 shadow-sm backdrop-blur-sm">
+                <CardHeader className="pb-3 border-b border-border/20">
+                    <CardTitle className="text-lg font-black flex items-center gap-2 text-foreground uppercase tracking-tight">
                         <Filter className="h-4 w-4 text-primary" />
                         Filtros de Búsqueda
                     </CardTitle>
@@ -228,7 +234,7 @@ export function HistoryTable() {
                             <Input
                                 id="pase"
                                 placeholder="Ej: 86467"
-                                className="pl-9 border-slate-300 focus:border-primary transition-all"
+                                className="pl-9 border-border/50 focus:border-primary transition-all h-9 bg-muted/20"
                                 value={filters.numeroPase}
                                 onChange={(e) => handleFilterChange("numeroPase", e.target.value)}
                             />
@@ -239,7 +245,7 @@ export function HistoryTable() {
                         <Input
                             id="equipo"
                             placeholder="Ej: SN-5000 / FMO-20000"
-                            className="border-slate-300 focus:border-primary transition-all"
+                            className="border-border/50 focus:border-primary transition-all h-9 bg-muted/20"
                             value={filters.equipo}
                             onChange={(e) => handleFilterChange("equipo", e.target.value)}
                         />
@@ -253,12 +259,16 @@ export function HistoryTable() {
                                     role="combobox"
                                     aria-expanded={openSolicitante}
                                     className={cn(
-                                        "w-full justify-between border-slate-300 font-normal hover:bg-slate-50 transition-colors",
+                                        "w-full h-9 justify-between border-slate-300 font-normal hover:bg-primary hover:text-white hover:border-primary transition-all group",
                                         !filters.persona && "text-muted-foreground"
                                     )}
                                 >
-                                    <div className="flex items-center gap-2 truncate text-xs">
-                                        <User className="h-3.5 w-3.5 text-primary/70" />
+                                    <div className={cn(
+                                        "flex items-center gap-2 truncate text-xs transition-colors",
+                                        filters.persona && "text-primary font-medium",
+                                        "group-hover:text-white"
+                                    )}>
+                                        <User className={cn("h-3.5 w-3.5 transition-colors", filters.persona ? "text-primary" : "text-primary/70", "group-hover:text-white")} />
                                         {filters.persona || "Filtrar por..."}
                                     </div>
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -319,12 +329,16 @@ export function HistoryTable() {
                                     role="combobox"
                                     aria-expanded={openDestino}
                                     className={cn(
-                                        "w-full justify-between border-slate-300 font-normal hover:bg-slate-50 transition-colors",
+                                        "w-full h-9 justify-between border-slate-300 font-normal hover:bg-primary hover:text-white hover:border-primary transition-all group",
                                         !filters.destino && "text-muted-foreground"
                                     )}
                                 >
-                                    <div className="flex items-center gap-2 truncate text-xs">
-                                        <MapPin className="h-3.5 w-3.5 text-primary/70" />
+                                    <div className={cn(
+                                        "flex items-center gap-2 truncate text-xs transition-colors",
+                                        filters.destino && "text-primary font-medium",
+                                        "group-hover:text-white"
+                                    )}>
+                                        <MapPin className={cn("h-3.5 w-3.5 transition-colors", filters.destino ? "text-primary" : "text-primary/70", "group-hover:text-white")} />
                                         {filters.destino || "Filtrar por..."}
                                     </div>
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -375,36 +389,85 @@ export function HistoryTable() {
                     </div>
                     <div className="space-y-2 md:col-span-2 lg:col-span-1">
                         <Label>Rango de Fechas</Label>
-                        <div className="flex gap-2">
-                            <Input
-                                type="date"
-                                value={filters.fechaInicio}
-                                onChange={(e) => handleFilterChange("fechaInicio", e.target.value)}
-                                className="text-xs border-slate-300 focus:border-primary transition-all"
-                            />
-                            <Input
-                                type="date"
-                                value={filters.fechaFin}
-                                onChange={(e) => handleFilterChange("fechaFin", e.target.value)}
-                                className="text-xs border-slate-300 focus:border-primary transition-all"
-                            />
+                        <div className="flex flex-col gap-2">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-full h-9 px-2 text-left font-normal text-xs justify-start border-slate-300 hover:bg-primary hover:text-white hover:border-primary transition-all group",
+                                                !filters.fechaInicio ? "text-muted-foreground" : "text-primary font-medium border-primary/20"
+                                            )}
+                                        >
+                                            <CalendarIcon className={cn("mr-1 h-3.5 w-3.5 transition-colors", filters.fechaInicio && "text-primary", "group-hover:text-white")} />
+                                            {filters.fechaInicio ? format(filters.fechaInicio, "dd/MM/yy") : "Inicio"}
+                                        </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={filters.fechaInicio}
+                                        onSelect={(date) => handleFilterChange("fechaInicio", date)}
+                                        initialFocus
+                                        locale={es}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                            <div className="flex gap-2">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-full h-9 px-2 text-left font-normal text-xs justify-start border-slate-300 hover:bg-primary hover:text-white hover:border-primary transition-all group",
+                                                !filters.fechaFin ? "text-muted-foreground" : "text-primary font-medium border-primary/20"
+                                            )}
+                                        >
+                                            <CalendarIcon className={cn("mr-1 h-3.5 w-3.5 transition-colors", filters.fechaFin && "text-primary", "group-hover:text-white")} />
+                                            {filters.fechaFin ? format(filters.fechaFin, "dd/MM/yy") : "Fin"}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="end">
+                                        <Calendar
+                                            mode="single"
+                                            selected={filters.fechaFin}
+                                            onSelect={(date) => handleFilterChange("fechaFin", date)}
+                                            initialFocus
+                                            locale={es}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                {filters.fechaInicio || filters.fechaFin ? (
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-9 w-9 shrink-0 text-muted-foreground"
+                                        onClick={() => {
+                                            handleFilterChange("fechaInicio", undefined);
+                                            handleFilterChange("fechaFin", undefined);
+                                        }}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                ) : null}
+                            </div>
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
             {/* Results Table */}
-            <Card className="animate-in slide-in-from-bottom-4 duration-700 delay-200 fill-mode-both border-slate-200/60 shadow-sm overflow-hidden">
+            <Card className="animate-in slide-in-from-bottom-4 duration-700 delay-200 fill-mode-both border-border/40 bg-card shadow-sm overflow-hidden">
                 <CardContent className="p-0">
                     <Table>
-                        <TableHeader className="bg-slate-50/80">
-                            <TableRow className="hover:bg-transparent">
-                                <TableHead className="w-[100px] font-semibold text-slate-700">No. Pase</TableHead>
-                                <TableHead className="font-semibold text-slate-700">Fecha</TableHead>
-                                <TableHead className="font-semibold text-slate-700">Solicitante</TableHead>
-                                <TableHead className="font-semibold text-slate-700">Destino</TableHead>
-                                <TableHead className="font-semibold text-slate-700">Equipo</TableHead>
-                                <TableHead className="text-right font-semibold text-slate-700">Acciones</TableHead>
+                        <TableHeader className="bg-muted/30 border-b border-border/50">
+                            <TableRow className="hover:bg-transparent border-none">
+                                <TableHead className="w-[120px] font-black text-foreground text-left uppercase text-xs tracking-wider">N° PASE</TableHead>
+                                <TableHead className="font-black text-foreground text-left uppercase text-xs tracking-wider">FECHA</TableHead>
+                                <TableHead className="font-black text-foreground text-left uppercase text-xs tracking-wider">SOLICITANTE</TableHead>
+                                <TableHead className="font-black text-foreground text-left uppercase text-xs tracking-wider">DESTINO</TableHead>
+                                <TableHead className="font-black text-foreground text-left uppercase text-xs tracking-wider">EQUIPO / MATERIAL</TableHead>
+                                <TableHead className="text-right font-black text-foreground uppercase text-xs tracking-wider">ACCIONES</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -425,19 +488,19 @@ export function HistoryTable() {
                                 </TableRow>
                             ) : (
                                 displayData.map((item) => (
-                                    <TableRow key={item.id} className="hover:bg-slate-50/50 transition-colors group cursor-default">
-                                        <TableCell className="font-medium text-slate-900">{item.numeroPase}</TableCell>
-                                        <TableCell className="text-slate-600">{new Date(item.fecha_emision).toLocaleDateString()}</TableCell>
-                                        <TableCell>
+                                    <TableRow key={item.id} className="hover:bg-muted/20 transition-colors group cursor-default border-border/20">
+                                        <TableCell className="font-bold text-foreground text-left">{item.numeroPase}</TableCell>
+                                        <TableCell className="text-muted-foreground text-left">{new Date(item.fecha_emision).toLocaleDateString()}</TableCell>
+                                        <TableCell className="text-left">
                                             <div className="flex flex-col">
-                                                <span className="font-medium text-slate-900">{item.solicitador?.nombre || 'N/A'}</span>
-                                                <span className="text-xs text-slate-500">{item.solicitador?.ficha || '-'}</span>
+                                                <span className="font-medium text-foreground">{item.solicitador?.nombre || 'N/A'}</span>
+                                                <span className="text-xs text-muted-foreground">{item.solicitador?.ficha || '-'}</span>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-slate-600">
+                                        <TableCell className="text-muted-foreground text-left">
                                             {item.destino?.nombre || 'N/A'}
                                         </TableCell>
-                                        <TableCell className="text-slate-600">
+                                        <TableCell className="text-muted-foreground text-left">
                                             {item.equiposPases && item.equiposPases.length > 0 ? (
                                                 (() => {
                                                     const groups: Record<string, any> = {};
@@ -472,7 +535,17 @@ export function HistoryTable() {
                                                 <Button 
                                                     variant="secondary" 
                                                     size="sm" 
-                                                    className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 hover:bg-red-100 text-red-600 border border-red-200"
+                                                    className="h-8 w-8 p-0 transition-colors bg-blue-900/20 hover:bg-blue-900/40 text-blue-400 border border-blue-900/50"
+                                                    onClick={() => router.push(`/?edit=${item.id}`)}
+                                                    title="Editar Pase"
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                    <span className="sr-only">Editar Pase</span>
+                                                </Button>
+                                                <Button 
+                                                    variant="secondary" 
+                                                    size="sm" 
+                                                    className="h-8 w-8 p-0 transition-colors bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50"
                                                     onClick={() => handleDownloadPDF(item.id)}
                                                     title="Descargar PDF"
                                                 >

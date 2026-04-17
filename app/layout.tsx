@@ -2,17 +2,19 @@
 
 import React, { useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { Outfit } from 'next/font/google'
+import localFont from 'next/font/local'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { Toaster } from "sonner"
 
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
+import { ThemeProvider } from "@/components/theme-provider"
 
-const outfit = Outfit({ 
-  subsets: ['latin'],
+const outfit = localFont({ 
+  src: '../public/fonts/Outfit-VariableFont_wght.ttf',
   variable: '--font-outfit',
+  display: 'swap',
 })
 
 export default function RootLayout({
@@ -29,13 +31,14 @@ export default function RootLayout({
 
   useEffect(() => {
     setIsMounted(true)
-    const token = localStorage.getItem("auth_token")
-    // Validar que el token no sea solo nulo o "null"/"undefined" como string
+    const token = typeof window !== 'undefined' ? localStorage.getItem("auth_token") : null
     const isValidToken = !!token && token !== "null" && token !== "undefined"
 
     if (!isValidToken && !isAuthPage) {
+      setIsLoading(true) 
       router.push("/login")
     } else if (isValidToken && isAuthPage) {
+      setIsLoading(true)
       router.push("/")
     } else {
       setIsLoading(false)
@@ -44,23 +47,30 @@ export default function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`font-sans antialiased text-white bg-[#0A0A0A] ${outfit.variable}`} suppressHydrationWarning>
+      <body className={`font-sans antialiased text-foreground bg-background ${outfit.variable}`} suppressHydrationWarning>
         {(!isMounted || (isLoading && !isAuthPage)) ? (
           <div className="flex items-center justify-center min-h-screen">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
           </div>
         ) : (
           <>
-            {isAuthPage ? (
-              <main>{children}</main>
-            ) : (
-              <SidebarProvider>
-                <AppSidebar />
-                <SidebarInset className="bg-[#0A0A0A] border-l border-white/5">
-                  {children}
-                </SidebarInset>
-              </SidebarProvider>
-            )}
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem
+              disableTransitionOnChange
+            >
+              {isAuthPage ? (
+                <main>{children}</main>
+              ) : (
+                <SidebarProvider>
+                  <AppSidebar />
+                  <SidebarInset className="bg-background">
+                    {children}
+                  </SidebarInset>
+                </SidebarProvider>
+              )}
+            </ThemeProvider>
             <Toaster position="top-right" richColors theme="dark" />
             <Analytics />
           </>

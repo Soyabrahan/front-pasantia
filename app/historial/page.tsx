@@ -50,7 +50,7 @@ async function StatsLoader() {
 
 export default function HistoryPage() {
     return (
-        <div className="min-h-screen bg-slate-50/50 pb-10">
+        <div className="min-h-screen bg-background pb-10">
             <Header 
                 title="HISTORIAL DE PASES"
                 subtitle="Consulta de Registros y Estadísticas FMO"

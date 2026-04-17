@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import {
     User,
     Truck,
@@ -17,7 +17,11 @@ import {
     CheckCircle,
     Key,
     MoreHorizontal,
-    Edit
+    Edit,
+    Settings2,
+    FileText,
+    UserCheck,
+    Hash
 } from "lucide-react"
 import {
     DropdownMenu,
@@ -33,6 +37,7 @@ import {
     Card,
     CardContent,
     CardDescription,
+    CardFooter,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
@@ -68,6 +73,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
 
 import { api } from "@/lib/api-client"
 
@@ -82,6 +89,14 @@ export default function ConfigurationPage() {
     const [currentUser, setCurrentUser] = useState<any>(null)
     const [isEditingProfile, setIsEditingProfile] = useState(false)
 
+    // Ajustes Generales
+    const [ajustes, setAjustes] = useState({
+        gerenteNombre: "Carmen Marquez",
+        gerenteCargo: "Gerente de Telemática (e)",
+        gerenteFicha: "15508",
+        ultimoFolio: ""
+    })
+
     // Estados para filas de "Agregar"
     const [isAddingUsuario, setIsAddingUsuario] = useState(false)
     const [isAddingVehiculo, setIsAddingVehiculo] = useState(false)
@@ -89,7 +104,7 @@ export default function ConfigurationPage() {
     const [isAddingEmpleado, setIsAddingEmpleado] = useState(false)
 
     const [newUsuario, setNewUsuario] = useState({ ficha: "", nombre: "", rol: "Administrador", contrasena: "admin" })
-    const [newVehiculo, setNewVehiculo] = useState({ placa: "", modelo: "", tipo: "", esFMO: false, fmo: "" })
+    const [newVehiculo, setNewVehiculo] = useState({ placa: "", modelo: "", tipo: "", esFMO: false, fmo: "", conductorId: "" })
     const [newDestino, setNewDestino] = useState({ nombre: "", direccion: "", telefono: "" })
     const [newEmpleado, setNewEmpleado] = useState({ ficha: "", nombre: "", departamento: "", cargo: "" })
 
@@ -126,7 +141,7 @@ export default function ConfigurationPage() {
         }
     }
 
-    React.useEffect(() => {
+    useEffect(() => {
         setMounted(true)
         const init = async () => {
             try {
@@ -136,9 +151,20 @@ export default function ConfigurationPage() {
                 console.error("Error fetching profile:", error)
             }
             fetchAll()
+            
+            // Cargar ajustes de localStorage
+            const savedAjustes = localStorage.getItem("fmo_pases_settings")
+            if (savedAjustes) {
+                setAjustes(JSON.parse(savedAjustes))
+            }
         }
         init()
     }, [])
+
+    const handleSaveAjustes = () => {
+        localStorage.setItem("fmo_pases_settings", JSON.stringify(ajustes))
+        toast.success("Ajustes guardados correctamente")
+    }
 
     const handleSaveUsuario = async () => {
         try {
@@ -157,10 +183,23 @@ export default function ConfigurationPage() {
 
     const handleSaveVehiculo = async () => {
         try {
-            const saved = await api.post<any>("/vehiculos", newVehiculo)
+            const conductorIdStr = newVehiculo.conductorId;
+            if (conductorIdStr) {
+                const conductorId = parseInt(conductorIdStr);
+                const isAlreadyAssigned = vehiculos.some(v => v.conductores?.some((c: any) => c.id === conductorId));
+                if (isAlreadyAssigned) {
+                    alert("Este conductor ya tiene un vehículo asignado.");
+                    return;
+                }
+            }
+            const payload = {
+                ...newVehiculo,
+                conductores: conductorIdStr ? [{ id: parseInt(conductorIdStr) }] : []
+            }
+            const saved = await api.post<any>("/vehiculos", payload)
             setVehiculos([...vehiculos, saved])
             setIsAddingVehiculo(false)
-            setNewVehiculo({ placa: "", modelo: "", tipo: "", esFMO: false, fmo: "" })
+            setNewVehiculo({ placa: "", modelo: "", tipo: "", esFMO: false, fmo: "", conductorId: "" })
         } catch (error) {
             alert("Error al guardar vehículo")
         }
@@ -190,7 +229,26 @@ export default function ConfigurationPage() {
 
     const handleUpdateVehiculo = async (id: number) => {
         try {
-            const updated = await api.patch<any>(`/vehiculos/${id}`, editVehiculo)
+            const conductorIdStr = editVehiculo.conductorId || (editVehiculo.conductores?.[0]?.id?.toString() || "");
+            
+            if (conductorIdStr) {
+                const conductorId = parseInt(conductorIdStr);
+                // Si el conductor cambió, verificar si ya tiene otro vehículo
+                const originalConductorId = editVehiculo.conductores?.[0]?.id;
+                if (conductorId !== originalConductorId) {
+                    const isAlreadyAssigned = vehiculos.some(v => v.id !== id && v.conductores?.some((c: any) => c.id === conductorId));
+                    if (isAlreadyAssigned) {
+                        alert("Este conductor ya tiene un vehículo asignado.");
+                        return;
+                    }
+                }
+            }
+
+            const payload = {
+                ...editVehiculo,
+                conductores: conductorIdStr ? [{ id: parseInt(conductorIdStr) }] : []
+            }
+            const updated = await api.patch<any>(`/vehiculos/${id}`, payload)
             setVehiculos(vehiculos.map(v => v.id === id ? updated : v))
             setEditingVehiculoId(null)
         } catch (error) {
@@ -328,7 +386,7 @@ export default function ConfigurationPage() {
             <main className="p-6 space-y-6 max-w-6xl mx-auto animate-fadeIn">
 
                 <Tabs defaultValue="usuarios" className="w-full" onValueChange={setActiveTab}>
-                    <TabsList className="grid w-full grid-cols-4 md:w-[500px] mb-4">
+                    <TabsList className="grid w-full grid-cols-5 md:w-[650px] mb-4">
                         <TabsTrigger value="usuarios" className="flex gap-2 text-xs md:text-sm">
                             <UsersIcon className="h-4 w-4" />
                             Usuarios
@@ -345,7 +403,81 @@ export default function ConfigurationPage() {
                             <User className="h-4 w-4" />
                             Empleados
                         </TabsTrigger>
+                        <TabsTrigger value="ajustes" className="flex gap-2 text-xs md:text-sm">
+                            <Settings2 className="h-4 w-4" />
+                            Ajustes
+                        </TabsTrigger>
                     </TabsList>
+
+                    {/* AJUSTES TAB */}
+                    <TabsContent value="ajustes">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <Card className="border-slate-200 shadow-sm">
+                                <CardHeader>
+                                    <div className="flex items-center gap-2">
+                                        <UserCheck className="h-5 w-5 text-primary" />
+                                        <CardTitle>Autoridad de Telemática</CardTitle>
+                                    </div>
+                                    <CardDescription>Datos del gerente que autoriza los pases.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label>Nombre del Gerente</Label>
+                                        <Input 
+                                            value={ajustes.gerenteNombre} 
+                                            onChange={e => setAjustes({...ajustes, gerenteNombre: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Cargo</Label>
+                                        <Input 
+                                            value={ajustes.gerenteCargo} 
+                                            onChange={e => setAjustes({...ajustes, gerenteCargo: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Ficha</Label>
+                                        <Input 
+                                            value={ajustes.gerenteFicha} 
+                                            onChange={e => setAjustes({...ajustes, gerenteFicha: e.target.value})}
+                                        />
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border-slate-200 shadow-sm">
+                                <CardHeader>
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="h-5 w-5 text-primary" />
+                                        <CardTitle>Configuración de Pases</CardTitle>
+                                    </div>
+                                    <CardDescription>Parámetros globales para la emisión de pases.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="flex items-center gap-2">
+                                            <Hash className="h-4 w-4" />
+                                            Corregir Número de Pase (Folio)
+                                        </Label>
+                                        <Input 
+                                            placeholder="Ej: 0050"
+                                            value={ajustes.ultimoFolio} 
+                                            onChange={e => setAjustes({...ajustes, ultimoFolio: e.target.value})}
+                                        />
+                                        <p className="text-[10px] text-muted-foreground italic">
+                                            * Use esto solo si necesita reiniciar o saltar la numeración automática.
+                                        </p>
+                                    </div>
+                                </CardContent>
+                                <CardFooter className="flex justify-end border-t pt-4">
+                                    <Button onClick={handleSaveAjustes} className="gap-2">
+                                        <Save className="h-4 w-4" />
+                                        Guardar Ajustes
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        </div>
+                    </TabsContent>
 
                     {/* USUARIOS TAB */}
                     <TabsContent value="usuarios">
@@ -574,7 +706,8 @@ export default function ConfigurationPage() {
                                         <TableHeader className="bg-muted/50">
                                             <TableRow>
                                                 <TableHead>Placa</TableHead>
-                                                <TableHead>Pertenece a</TableHead>
+                                                <TableHead>FMO / Part.</TableHead>
+                                                <TableHead>Pertenece a (Conductor)</TableHead>
                                                 <TableHead className="text-right">Acciones</TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -585,9 +718,23 @@ export default function ConfigurationPage() {
                                                     <TableCell>
                                                         <div className="flex items-center gap-2">
                                                             <input type="checkbox" checked={newVehiculo.esFMO} onChange={e => setNewVehiculo({...newVehiculo, esFMO: e.target.checked})} />
-                                                            <span className="text-xs">FMO</span>
-                                                            {newVehiculo.esFMO && <Input placeholder="N° FMO" className="h-7 w-20 text-xs" value={newVehiculo.fmo} onChange={e => setNewVehiculo({...newVehiculo, fmo: e.target.value})} />}
+                                                            <span className="text-[10px] font-bold">FMO</span>
+                                                            {newVehiculo.esFMO && <Input placeholder="N° FMO" className="h-7 w-16 text-[10px]" value={newVehiculo.fmo} onChange={e => setNewVehiculo({...newVehiculo, fmo: e.target.value})} />}
                                                         </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Select value={newVehiculo.conductorId} onValueChange={(val) => setNewVehiculo({...newVehiculo, conductorId: val})}>
+                                                            <SelectTrigger className="h-8 text-xs">
+                                                                <SelectValue placeholder="Seleccionar..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {empleados.filter(e => e.rol === "Conductor").map(e => (
+                                                                    <SelectItem key={e.id} value={e.id.toString()}>
+                                                                        {e.nombre}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex justify-end gap-2">
@@ -613,9 +760,23 @@ export default function ConfigurationPage() {
                                                             <TableCell>
                                                                 <div className="flex items-center gap-2">
                                                                     <input type="checkbox" checked={editVehiculo.esFMO} onChange={e => setEditVehiculo({...editVehiculo, esFMO: e.target.checked})} />
-                                                                    <span className="text-xs">FMO</span>
-                                                                    {editVehiculo.esFMO && <Input className="h-7 w-20 text-xs" value={editVehiculo.fmo} onChange={e => setEditVehiculo({...editVehiculo, fmo: e.target.value})} />}
+                                                                    <span className="text-[10px] font-bold">FMO</span>
+                                                                    {editVehiculo.esFMO && <Input className="h-7 w-16 text-[10px]" value={editVehiculo.fmo} onChange={e => setEditVehiculo({...editVehiculo, fmo: e.target.value})} />}
                                                                 </div>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Select value={editVehiculo.conductorId || (editVehiculo.conductores?.[0]?.id?.toString() || "")} onValueChange={(val) => setEditVehiculo({...editVehiculo, conductorId: val})}>
+                                                                    <SelectTrigger className="h-8 text-xs">
+                                                                        <SelectValue placeholder="Seleccionar..." />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {empleados.filter(e => e.rol === "Conductor").map(e => (
+                                                                            <SelectItem key={e.id} value={e.id.toString()}>
+                                                                                {e.nombre}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
                                                             </TableCell>
                                                             <TableCell className="text-right">
                                                                 <div className="flex justify-end gap-2">
@@ -627,12 +788,20 @@ export default function ConfigurationPage() {
                                                     ) : (
                                                         <>
                                                             <TableCell className="font-bold tracking-widest uppercase">{v.placa}</TableCell>
-                                                            <TableCell>{v.modelo}</TableCell>
-                                                            <TableCell>{v.tipo}</TableCell>
                                                             <TableCell>
                                                                 <Badge variant={v.esFMO ? "default" : "outline"} className={v.esFMO ? "bg-orange-600 hover:bg-orange-700" : ""}>
-                                                                    {v.esFMO ? "FMO Interno" : "Particular"}
+                                                                    {v.esFMO ? `FMO (${v.fmo || '-'})` : "Particular"}
                                                                 </Badge>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-2 text-sm">
+                                                                    <User className="h-3 w-3 text-primary" />
+                                                                    {v.conductores && v.conductores.length > 0 ? (
+                                                                        <span className="font-medium">{v.conductores[0].nombre}</span>
+                                                                    ) : (
+                                                                        <span className="text-muted-foreground italic">Sin asignar</span>
+                                                                    )}
+                                                                </div>
                                                             </TableCell>
                                                             <TableCell className="text-right">
                                                                 <DropdownMenu>
@@ -640,7 +809,13 @@ export default function ConfigurationPage() {
                                                                         <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
                                                                     </DropdownMenuTrigger>
                                                                     <DropdownMenuContent align="end">
-                                                                        <DropdownMenuItem onClick={() => { setEditingVehiculoId(v.id); setEditVehiculo({...v}); }}>
+                                                                        <DropdownMenuItem onClick={() => { 
+                                                                            setEditingVehiculoId(v.id); 
+                                                                            setEditVehiculo({
+                                                                                ...v, 
+                                                                                conductorId: v.conductores?.[0]?.id?.toString() || "" 
+                                                                            }); 
+                                                                        }}>
                                                                             <Edit className="h-4 w-4 mr-2" /> Editar
                                                                         </DropdownMenuItem>
                                                                         <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteVehiculo(v.id)}>

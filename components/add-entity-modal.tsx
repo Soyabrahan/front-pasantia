@@ -19,9 +19,10 @@ import { cn } from "@/lib/utils";
 interface AddEntityModalProps {
   isOpen: boolean;
   onClose: () => void;
-  type: "empleado" | "destino";
+  type: "empleado" | "destino" | "vehiculo";
   role?: string; // Specific for empleado
   onSuccess: (data: any) => void;
+  vehiculosDisponibles?: any[]; // Prop opcional para asignar al crear conductor
 }
 
 export function AddEntityModal({
@@ -30,6 +31,7 @@ export function AddEntityModal({
   type,
   role,
   onSuccess,
+  vehiculosDisponibles = [],
 }: AddEntityModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,14 +48,27 @@ export function AddEntityModal({
     direccion: "",
     telefono: "",
   });
+  
+  const [vehiculoData, setVehiculoData] = useState({
+    placa: "",
+    marca: "",
+    modelo: "",
+    esFMO: false,
+    fmo: "",
+    conductorId: "", // Para asignación inversa si se desea
+  });
 
   useEffect(() => {
     if (isOpen) {
       setError(null);
-      setEmpleadoData({ ficha: "", nombre: "", departamento: "", cargo: "" });
+      setEmpleadoData({ ficha: "", nombre: "", departamento: "", cargo: role === "Conductor" ? "CONDUCTOR" : "" });
       setDestinoData({ nombre: "", direccion: "", telefono: "" });
+      setVehiculoData({ placa: "", marca: "", modelo: "", esFMO: false, fmo: "", conductorId: "" });
     }
   }, [isOpen]);
+
+  const [showVehicleFields, setShowVehicleFields] = useState(false);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
 
   const handleEmpleadoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmpleadoData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -61,6 +76,11 @@ export function AddEntityModal({
 
   const handleDestinoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDestinoData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleVehiculoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target as HTMLInputElement;
+    setVehiculoData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,11 +95,24 @@ export function AddEntityModal({
           throw new Error("La Ficha y el Nombre son obligatorios");
         }
         result = await api.post("/empleados", { ...empleadoData, rol: role });
-      } else {
+        
+        // Si es conductor y se seleccionó/creó vehículo, asignar
+        if (role === "Conductor") {
+           const vehicleToAssign = showVehicleFields ? await api.post("/vehiculos", vehiculoData) : (selectedVehicleId ? { id: parseInt(selectedVehicleId) } : null);
+           if (vehicleToAssign) {
+              await api.patch(`/vehiculos/${vehicleToAssign.id}`, { conductores: [{ id: result.id }] });
+           }
+        }
+      } else if (type === "destino") {
         if (!destinoData.nombre || !destinoData.direccion) {
           throw new Error("El Nombre y la Dirección son obligatorios");
         }
         result = await api.post("/destinos", destinoData);
+      } else {
+        if (!vehiculoData.placa) {
+          throw new Error("La Placa es obligatoria");
+        }
+        result = await api.post("/vehiculos", vehiculoData);
       }
 
       onSuccess(result);
@@ -99,11 +132,11 @@ export function AddEntityModal({
       <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden rounded-xl border-none shadow-2xl">
         <div className="bg-primary p-6 text-primary-foreground flex items-center gap-3">
           <div className="p-2 bg-white/20 rounded-lg">
-            {type === "empleado" ? <UserPlus className="h-6 w-6" /> : <MapPinPlus className="h-6 w-6" />}
+            {type === "empleado" ? <UserPlus className="h-6 w-6" /> : type === "destino" ? <MapPinPlus className="h-6 w-6" /> : <Truck className="h-6 w-6" />}
           </div>
           <div>
             <DialogTitle className="text-xl font-bold">
-              {type === "empleado" ? `Nuevo ${role}` : "Nuevo Destino"}
+              {type === "empleado" ? `Nuevo ${role}` : type === "destino" ? "Nuevo Destino" : "Registrar Vehículo"}
             </DialogTitle>
             <DialogDescription className="text-primary-foreground/80 text-xs mt-1">
               Los datos se guardarán como respuestas rápidas para futuros pases.
@@ -111,7 +144,7 @@ export function AddEntityModal({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 pt-4 space-y-5 bg-white">
+        <form onSubmit={handleSubmit} className="p-6 pt-4 space-y-4 bg-white max-h-[70vh] overflow-y-auto">
           <div className="space-y-4">
             {type === "empleado" ? (
               <div className="grid grid-cols-1 gap-4">
@@ -156,21 +189,66 @@ export function AddEntityModal({
                     className={cn("col-span-3", inputClass)}
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="cargo" className={labelClass}>
-                    Cargo
-                  </Label>
-                  <Input
-                    id="cargo"
-                    name="cargo"
-                    placeholder="Ej. Analista"
-                    value={empleadoData.cargo}
-                    onChange={handleEmpleadoChange}
-                    className={cn("col-span-3", inputClass)}
-                  />
-                </div>
+                {role !== "Conductor" && (
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="cargo" className={labelClass}>
+                      Cargo
+                    </Label>
+                    <Input
+                      id="cargo"
+                      name="cargo"
+                      placeholder="Ej. Analista"
+                      value={empleadoData.cargo}
+                      onChange={handleEmpleadoChange}
+                      className={cn("col-span-3", inputClass)}
+                    />
+                  </div>
+                )}
+
+                {role === "Conductor" && (
+                  <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label className={labelClass}>Vehículo Asignado</Label>
+                      <Button 
+                        type="button" 
+                        variant="link" 
+                        size="sm" 
+                        className="h-auto p-0 text-[10px]"
+                        onClick={() => setShowVehicleFields(!showVehicleFields)}
+                      >
+                        {showVehicleFields ? "Seleccionar Existente" : "Crear Nuevo Vehículo"}
+                      </Button>
+                    </div>
+
+                    {!showVehicleFields ? (
+                      <select 
+                        className={cn("w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50", inputClass)}
+                        value={selectedVehicleId}
+                        onChange={(e) => setSelectedVehicleId(e.target.value)}
+                      >
+                        <option value="">Sin vehículo</option>
+                        {vehiculosDisponibles.map(v => (
+                          <option key={v.id} value={v.id}>{v.placa} {v.esFMO ? `(FMO: ${v.fmo})` : '(Particular)'}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="space-y-3 p-3 bg-slate-50 rounded-lg border border-dashed border-slate-300 animate-in slide-in-from-top-2">
+                        <Input name="placa" placeholder="Placa (ABC-123)" value={vehiculoData.placa} onChange={handleVehiculoChange} className={inputClass} required />
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input name="marca" placeholder="Marca" value={vehiculoData.marca} onChange={handleVehiculoChange} className={inputClass} />
+                          <Input name="modelo" placeholder="Modelo" value={vehiculoData.modelo} onChange={handleVehiculoChange} className={inputClass} />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input type="checkbox" id="esFMO_modal" name="esFMO" checked={vehiculoData.esFMO} onChange={handleVehiculoChange} />
+                          <Label htmlFor="esFMO_modal" className="text-xs">¿Es Vehículo FMO?</Label>
+                          {vehiculoData.esFMO && <Input name="fmo" placeholder="N° FMO" value={vehiculoData.fmo} onChange={handleVehiculoChange} className={cn("h-7 w-24 text-[10px]", inputClass)} />}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            ) : (
+            ) : type === "destino" ? (
               <div className="grid grid-cols-1 gap-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="nombre_dest" className={labelClass}>
@@ -214,6 +292,31 @@ export function AddEntityModal({
                   />
                 </div>
               </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                 <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="placa_v" className={labelClass}>Placa</Label>
+                  <Input id="placa_v" name="placa" placeholder="Placa" value={vehiculoData.placa} onChange={handleVehiculoChange} className={cn("col-span-3 uppercase", inputClass)} required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="marca_v" className={labelClass}>Marca</Label>
+                  <Input id="marca_v" name="marca" placeholder="Ej. Toyota" value={vehiculoData.marca} onChange={handleVehiculoChange} className={cn("col-span-3", inputClass)} />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="modelo_v" className={labelClass}>Modelo</Label>
+                  <Input id="modelo_v" name="modelo" placeholder="Ej. Hilux" value={vehiculoData.modelo} onChange={handleVehiculoChange} className={cn("col-span-3", inputClass)} />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className={labelClass}>Tipo</Label>
+                  <div className="col-span-3 flex items-center gap-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" id="esFMO_only" name="esFMO" checked={vehiculoData.esFMO} onChange={handleVehiculoChange} />
+                      <Label htmlFor="esFMO_only" className="text-xs">FMO</Label>
+                    </div>
+                    {vehiculoData.esFMO && <Input name="fmo" placeholder="N° FMO" value={vehiculoData.fmo} onChange={handleVehiculoChange} className={cn("h-8 w-24 text-xs", inputClass)} />}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
@@ -243,7 +346,7 @@ export function AddEntityModal({
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}
-              Guardar Registro
+              {loading ? "Guardando..." : "Guardar Registro"}
             </Button>
           </DialogFooter>
         </form>
@@ -251,3 +354,5 @@ export function AddEntityModal({
     </Dialog>
   );
 }
+
+import { Truck } from "lucide-react";

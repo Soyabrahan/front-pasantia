@@ -13,9 +13,9 @@ interface DashboardStatsProps {
 export function DashboardStats({ stats }: DashboardStatsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <Card className="overflow-hidden border-slate-200/50 shadow-sm hover:shadow-md transition-all group relative isolate">
+      <Card className="overflow-hidden border-border/40 bg-card shadow-sm hover:shadow-md transition-all group relative isolate">
         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-          <CardTitle className="text-sm font-medium text-slate-500">Total Pases Emitidos</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Pases Emitidos</CardTitle>
           <div className="bg-primary/10 p-2 rounded-md group-hover:scale-110 transition-transform group-hover:bg-primary/20">
             <FileText className="h-4 w-4 text-primary" />
           </div>
@@ -28,9 +28,9 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
         <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-primary to-accent opacity-0 group-hover:opacity-100 transition-opacity" />
       </Card>
 
-      <Card className="overflow-hidden border-slate-200/50 shadow-sm hover:shadow-md transition-all group relative isolate">
+      <Card className="overflow-hidden border-border/40 bg-card shadow-sm hover:shadow-md transition-all group relative isolate">
         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-          <CardTitle className="text-sm font-medium text-slate-500">Pases Hoy</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Pases Hoy</CardTitle>
           <div className="bg-emerald-500/10 p-2 rounded-md group-hover:scale-110 transition-transform group-hover:bg-emerald-500/20">
             <CalendarIcon className="h-4 w-4 text-emerald-500" />
           </div>
@@ -45,9 +45,9 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
         <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-emerald-400 to-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity" />
       </Card>
 
-      <Card className="overflow-hidden border-slate-200/50 shadow-sm hover:shadow-md transition-all group relative isolate">
+      <Card className="overflow-hidden border-border/40 bg-card shadow-sm hover:shadow-md transition-all group relative isolate">
         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-          <CardTitle className="text-sm font-medium text-slate-500">Pases Esta Semana</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Pases Esta Semana</CardTitle>
           <div className="bg-amber-500/10 p-2 rounded-md group-hover:scale-110 transition-transform group-hover:bg-amber-500/20">
             <CalendarIcon className="h-4 w-4 text-amber-500" />
           </div>

@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { Calendar, Home, Inbox, Search, Settings, Truck, History, LogOut, FileText } from "lucide-react"
+import { Calendar, Home, Inbox, Search, Settings, Truck, History, LogOut, FileText, Moon, Sun } from "lucide-react"
+import { useTheme } from "next-themes"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 
@@ -41,6 +42,21 @@ export function AppSidebar() {
     const pathname = usePathname()
     const [userName, setUserName] = useState("Usuario")
     const { setOpen } = useSidebar()
+    const { theme, setTheme } = useTheme()
+
+    const toggleTheme = () => {
+        const nextTheme = theme === "dark" ? "light" : "dark"
+        
+        // Check if browser supports startViewTransition
+        if (!document.startViewTransition) {
+            setTheme(nextTheme)
+            return
+        }
+
+        document.startViewTransition(() => {
+            setTheme(nextTheme)
+        })
+    }
 
     useEffect(() => {
         const token = localStorage.getItem("auth_token")
@@ -72,9 +88,9 @@ export function AppSidebar() {
     }
 
     // Colors:
-    // Muestra: Sidebar background is dark red, Active is bright red.
-    const sidebarBg = "bg-[#8A1538]" 
-    const activeBg = "bg-[#B11739]" 
+    // Sidebar background is the primary red, Active is a slightly lighter transition
+    const sidebarBg = "bg-primary" 
+    const activeBg = "bg-primary/80" 
 
     return (
         <Sidebar 
@@ -132,7 +148,18 @@ export function AppSidebar() {
                         <span className="truncate text-[15px] font-medium text-white/90" style={{ fontFamily: "Arial, sans-serif" }}>
                             Usuario: {userName}
                         </span>
-                        <Settings className="size-[18px] shrink-0 text-white/70 cursor-pointer hover:text-white transition-colors" />
+                        <div className="flex items-center gap-3">
+                            <button 
+                                onClick={toggleTheme}
+                                className="size-[18px] shrink-0 text-white/70 cursor-pointer hover:text-white transition-colors focus:outline-none"
+                                title={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+                            >
+                                {theme === "dark" ? <Sun className="size-full" /> : <Moon className="size-full" />}
+                            </button>
+                            <Link href="/configuracion">
+                                <Settings className="size-[18px] shrink-0 text-white/70 cursor-pointer hover:text-white transition-colors" />
+                            </Link>
+                        </div>
                     </div>
                     <SidebarMenu>
                         <SidebarMenuItem>
