@@ -412,7 +412,7 @@ export default function ConfigurationPage() {
                     {/* AJUSTES TAB */}
                     <TabsContent value="ajustes">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <Card className="border-slate-200 shadow-sm">
+                            <Card className="border-border shadow-sm">
                                 <CardHeader>
                                     <div className="flex items-center gap-2">
                                         <UserCheck className="h-5 w-5 text-primary" />
@@ -445,7 +445,7 @@ export default function ConfigurationPage() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="border-slate-200 shadow-sm">
+                            <Card className="border-border shadow-sm">
                                 <CardHeader>
                                     <div className="flex items-center gap-2">
                                         <FileText className="h-5 w-5 text-primary" />
@@ -481,7 +481,7 @@ export default function ConfigurationPage() {
 
                     {/* USUARIOS TAB */}
                     <TabsContent value="usuarios">
-                        <Card className="border-slate-200 shadow-sm animate-in fade-in zoom-in-95 duration-500">
+                        <Card className="border-border shadow-sm animate-in fade-in zoom-in-95 duration-500">
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <div className="space-y-1">
                                     <CardTitle>{isAdmin ? "Perfiles de Usuario" : "Configuración de mi Perfil"}</CardTitle>
@@ -583,7 +583,7 @@ export default function ConfigurationPage() {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="rounded-md border border-slate-200 overflow-hidden">
+                                    <div className="rounded-md border border-border overflow-hidden">
                                         <Table>
                                             <TableHeader className="bg-muted/50">
                                                     <TableRow className="bg-muted/50">
@@ -615,7 +615,7 @@ export default function ConfigurationPage() {
                                                                     <div className="mt-2 p-2 bg-background/50 rounded border border-transparent">
                                                                         <div className="text-[10px] font-bold text-primary">{newUsuario.nombre}</div>
                                                                         <div className="text-[10px] text-muted-foreground italic">Ficha: {newUsuario.ficha}</div>
-                                                                        <div className="text-[10px] text-zinc-500 mt-1 uppercase font-bold tracking-tighter">
+                                                                        <div className="text-[10px] text-zinc-400 mt-1 uppercase font-bold tracking-tighter">
                                                                             Contraseña: {newUsuario.rol === 'Administrador' ? 'admin' : '0000'} (Predefinida)
                                                                         </div>
                                                                     </div>
@@ -682,7 +682,7 @@ export default function ConfigurationPage() {
 
                     {/* VEHICULOS TAB */}
                     <TabsContent value="vehiculos">
-                        <Card className="border-slate-200 shadow-sm animate-in fade-in zoom-in-95 duration-500">
+                        <Card className="border-border shadow-sm animate-in fade-in zoom-in-95 duration-500">
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <div className="space-y-1">
                                     <CardTitle>Flota de Vehículos</CardTitle>
@@ -701,7 +701,7 @@ export default function ConfigurationPage() {
                                 </Button>
                             </CardHeader>
                             <CardContent>
-                                <div className="rounded-md border border-slate-200 overflow-hidden">
+                                <div className="rounded-md border border-border overflow-hidden">
                                     <Table>
                                         <TableHeader className="bg-muted/50">
                                             <TableRow>

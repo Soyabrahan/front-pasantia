@@ -135,6 +135,7 @@ function MaterialPassForm() {
     // Observations / Request
 
     solicitud: "",
+    observaciones: "",
 
     // Applicant Info
     solicitante: "",
@@ -612,8 +613,8 @@ function MaterialPassForm() {
 
   if (!mounted) return null;
 
-  const inputStyles = "bg-slate-100 border-slate-400 focus-visible:ring-ring focus-visible:border-ring text-base";
-  const readOnlyStyles = "bg-slate-200/60 border-slate-300 cursor-not-allowed text-slate-600 font-bold focus-visible:ring-0";
+  const inputStyles = "bg-background border-border focus-visible:ring-ring focus-visible:border-ring text-base";
+  const readOnlyStyles = "bg-muted border-border cursor-not-allowed text-foreground font-bold focus-visible:ring-0";
 
   return (
     <div className="min-h-screen bg-background pb-10">
@@ -654,7 +655,7 @@ function MaterialPassForm() {
             </CardHeader>
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-3">
-                <Label className="text-base font-black text-slate-700">TIPO DE MOVIMIENTO</Label>
+                <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">TIPO DE MOVIMIENTO</Label>
                 <Select value={formData.conceptoOpcion} onValueChange={(val) => handleInputChange("conceptoOpcion", val)}>
                   <SelectTrigger className={cn("h-12 text-lg font-bold", inputStyles)}>
                     <SelectValue placeholder="Elija una opción..." />
@@ -669,7 +670,7 @@ function MaterialPassForm() {
                 </Select>
               </div>
               <div className="space-y-3">
-                <Label className="text-base font-black text-slate-700">TIEMPO ESTIMADO DE REGRESO</Label>
+                <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">TIEMPO ESTIMADO DE REGRESO</Label>
                 <Input
                   className={cn("h-12 text-lg", inputStyles)}
                   placeholder="Ej. 3 días, 1 semana, Indefinido..."
@@ -689,7 +690,7 @@ function MaterialPassForm() {
             </CardHeader>
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3 md:col-span-2">
-                <Label className="text-base font-black text-slate-700">EMBÁRGUESE A (NOMBRE / EMPRESA)</Label>
+                <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">EMBÁRGUESE A (NOMBRE / EMPRESA)</Label>
                 <div className="flex flex-col gap-2">
                   <Popover open={openDestino} onOpenChange={setOpenDestino}>
                     <PopoverTrigger asChild>
@@ -746,26 +747,26 @@ function MaterialPassForm() {
                 </div>
               </div>
               <div className="space-y-3">
-                <Label className="text-base font-black text-slate-700">N° ORDEN DE COMPRA</Label>
+                <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">N° ORDEN DE COMPRA</Label>
                 <Input className={cn("h-12 text-lg", inputStyles)} value={formData.ordenCompra} onChange={(e) => handleInputChange("ordenCompra", e.target.value)} />
               </div>
               <div className="space-y-3">
-                <Label className="text-base font-black text-slate-700">TELÉFONO</Label>
+                <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">TELÉFONO</Label>
                 <Input type="tel" className={cn("h-12 text-lg", readOnlyStyles)} value={formData.telefono} readOnly tabIndex={-1} />
               </div>
               <div className="space-y-3 md:col-span-2">
-                <Label className="text-base font-black text-slate-700">DIRECCIÓN</Label>
+                <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">DIRECCIÓN</Label>
                 <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.direccion} readOnly tabIndex={-1} />
               </div>
               <div className="md:col-span-2 pt-2">
-                <Label className="block mb-4 text-base font-black text-slate-700">CONDICIÓN DE PAGO</Label>
+                <Label className="block mb-4 text-base font-black text-foreground font-black uppercase tracking-tight">CONDICIÓN DE PAGO</Label>
                 <RadioGroup value={formData.tipoPago} onValueChange={(val) => handleInputChange("tipoPago", val)} className="flex gap-10">
                   <label className="flex items-center space-x-3 cursor-pointer group" htmlFor="contado">
-                    <RadioGroupItem value="CONTADO" id="contado" className="border-slate-500 w-6 h-6 border-2" />
+                    <RadioGroupItem value="CONTADO" id="contado" className="border-border w-6 h-6 border-2" />
                     <span className="text-xl font-black group-hover:text-primary transition-colors">Contado</span>
                   </label>
                   <label className="flex items-center space-x-3 cursor-pointer group" htmlFor="credito">
-                    <RadioGroupItem value="CREDITO" id="credito" className="border-slate-500 w-6 h-6 border-2" />
+                    <RadioGroupItem value="CREDITO" id="credito" className="border-border w-6 h-6 border-2" />
                     <span className="text-xl font-black group-hover:text-primary transition-colors">Crédito</span>
                   </label>
                 </RadioGroup>
@@ -783,7 +784,7 @@ function MaterialPassForm() {
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-6">
                 <div className="space-y-3">
-                  <Label className="text-base font-black text-slate-700">NOMBRE DEL CONDUCTOR</Label>
+                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">NOMBRE DEL CONDUCTOR</Label>
                   <Popover open={openConductor} onOpenChange={setOpenConductor}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" role="combobox" className={cn("w-full h-12 justify-between text-lg", inputStyles)}>
@@ -846,7 +847,7 @@ function MaterialPassForm() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-base font-black text-slate-700">VEHÍCULO (MARCA / MODELO / PLACA)</Label>
+                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">VEHÍCULO (MARCA / MODELO / PLACA)</Label>
                   <Popover open={openVehiculoParticular} onOpenChange={setOpenVehiculoParticular}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" role="combobox" className={cn("w-full h-12 justify-between text-lg", inputStyles)}>
@@ -905,11 +906,11 @@ function MaterialPassForm() {
 
               <div className="space-y-6">
                 <div className="space-y-3">
-                  <Label className="text-base font-black text-slate-700">FICHA O CÉDULA</Label>
+                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">FICHA O CÉDULA</Label>
                   <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.fichaConductor} readOnly tabIndex={-1} />
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-base font-black text-slate-700">VEHÍCULO F.M.O.</Label>
+                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">VEHÍCULO F.M.O.</Label>
                   <Input className={cn("h-12 text-lg", readOnlyStyles)} placeholder="Se llena automáticamente..." value={formData.vehiculoFMO} readOnly tabIndex={-1} />
                 </div>
               </div>
@@ -926,7 +927,7 @@ function MaterialPassForm() {
             </CardHeader>
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-3">
-                <Label className="text-base font-black text-slate-700">NOMBRE</Label>
+                <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">NOMBRE</Label>
                 <div className="flex flex-col gap-2">
                   <Popover open={openDespachador} onOpenChange={setOpenDespachador}>
                     <PopoverTrigger asChild>
@@ -972,15 +973,15 @@ function MaterialPassForm() {
               </div>
               <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-3">
-                  <Label className="text-base font-black text-slate-700">FICHA</Label>
+                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">FICHA</Label>
                   <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.fichaDespachador} readOnly tabIndex={-1} />
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-base font-black text-slate-700">CARGO</Label>
+                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">CARGO</Label>
                   <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.cargoDespachador} readOnly tabIndex={-1} />
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-base font-black text-slate-700">DEPARTAMENTO</Label>
+                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">DEPARTAMENTO</Label>
                   <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.departamentoDespachador} readOnly tabIndex={-1} />
                 </div>
               </div>
@@ -997,7 +998,7 @@ function MaterialPassForm() {
             </CardHeader>
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-3">
-                <Label className="text-base font-black text-slate-700">NOMBRE DEL SOLICITANTE</Label>
+                <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">NOMBRE DEL SOLICITANTE</Label>
                 <div className="flex flex-col gap-2">
                   <Popover open={openSolicitante} onOpenChange={setOpenSolicitante}>
                     <PopoverTrigger asChild>
@@ -1043,15 +1044,15 @@ function MaterialPassForm() {
               </div>
               <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-3">
-                  <Label className="text-base font-black text-slate-700">FICHA</Label>
+                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">FICHA</Label>
                   <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.fichaSolicitante} readOnly tabIndex={-1} />
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-base font-black text-slate-700">CARGO</Label>
+                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">CARGO</Label>
                   <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.cargoSolicitante} readOnly tabIndex={-1} />
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-base font-black text-slate-700">DEPARTAMENTO</Label>
+                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">DEPARTAMENTO</Label>
                   <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.departamentoSolicitante} readOnly tabIndex={-1} />
                 </div>
               </div>
@@ -1068,15 +1069,15 @@ function MaterialPassForm() {
             </CardHeader>
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
-                <Label className="text-sm font-black text-muted-foreground uppercase">AUTORIZADO POR</Label>
+                <Label className="text-sm font-black text-foreground font-black uppercase tracking-tight">AUTORIZADO POR</Label>
                 <Input className={cn("h-11 text-lg font-black uppercase border-border/60 shadow-sm", readOnlyStyles)} value={formData.autorizadoPor} readOnly tabIndex={-1} />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-black text-muted-foreground uppercase">CARGO</Label>
+                <Label className="text-sm font-black text-foreground font-black uppercase tracking-tight">CARGO</Label>
                 <Input className={cn("h-11 text-base font-black uppercase border-border/60 shadow-sm", readOnlyStyles)} value={formData.cargoAutorizador} readOnly tabIndex={-1} />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-black text-muted-foreground uppercase">FICHA</Label>
+                <Label className="text-sm font-black text-foreground font-black uppercase tracking-tight">FICHA</Label>
                 <Input className={cn("h-11 text-lg font-black uppercase border-border/60 shadow-sm", readOnlyStyles)} value={formData.fichaAutorizador} readOnly tabIndex={-1} />
               </div>
             </CardContent>
@@ -1130,7 +1131,7 @@ function MaterialPassForm() {
               <AlertTriangle className="h-8 w-8" />
               {validationModal.title}
             </DialogTitle>
-            <DialogDescription className="text-lg text-slate-700 pt-4 font-bold">
+            <DialogDescription className="text-lg text-foreground font-black uppercase tracking-tight pt-4 font-bold">
               {validationModal.message}
             </DialogDescription>
           </DialogHeader>

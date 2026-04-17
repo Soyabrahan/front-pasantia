@@ -89,16 +89,19 @@ export function AddEntityModal({
     setError(null);
 
     try {
-      let result;
+      let result: any;
       if (type === "empleado") {
         if (!empleadoData.ficha || !empleadoData.nombre) {
           throw new Error("La Ficha y el Nombre son obligatorios");
         }
-        result = await api.post("/empleados", { ...empleadoData, rol: role });
+        result = await api.post<{ id: string | number }>("/empleados", { ...empleadoData, rol: role });
         
         // Si es conductor y se seleccionó/creó vehículo, asignar
         if (role === "Conductor") {
-           const vehicleToAssign = showVehicleFields ? await api.post("/vehiculos", vehiculoData) : (selectedVehicleId ? { id: parseInt(selectedVehicleId) } : null);
+           const vehicleToAssign = showVehicleFields 
+             ? await api.post<{ id: string | number }>("/vehiculos", vehiculoData) 
+             : (selectedVehicleId ? { id: parseInt(selectedVehicleId) } : null);
+           
            if (vehicleToAssign) {
               await api.patch(`/vehiculos/${vehicleToAssign.id}`, { conductores: [{ id: result.id }] });
            }
@@ -108,9 +111,9 @@ export function AddEntityModal({
           throw new Error("El Nombre y la Dirección son obligatorios");
         }
         result = await api.post("/destinos", destinoData);
-      } else {
-        if (!vehiculoData.placa) {
-          throw new Error("La Placa es obligatoria");
+      } else if (type === "vehiculo") {
+        if (!vehiculoData.placa && !vehiculoData.fmo) {
+          throw new Error("Debe ingresar la Placa o el Número FMO");
         }
         result = await api.post("/vehiculos", vehiculoData);
       }
@@ -124,8 +127,8 @@ export function AddEntityModal({
     }
   };
 
-  const inputClass = "bg-slate-50 border-slate-300 text-slate-900 focus:border-primary focus:ring-1 focus:ring-primary h-10 transition-all";
-  const labelClass = "text-sm font-semibold text-slate-700 uppercase tracking-tight";
+  const inputClass = "bg-background border-border text-foreground focus:border-primary focus:ring-1 focus:ring-primary h-10 transition-all";
+  const labelClass = "text-sm font-semibold text-foreground uppercase tracking-tight";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -144,7 +147,7 @@ export function AddEntityModal({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 pt-4 space-y-4 bg-white max-h-[70vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 pt-4 space-y-4 bg-background max-h-[70vh] overflow-y-auto">
           <div className="space-y-4">
             {type === "empleado" ? (
               <div className="grid grid-cols-1 gap-4">
@@ -206,7 +209,7 @@ export function AddEntityModal({
                 )}
 
                 {role === "Conductor" && (
-                  <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+                  <div className="mt-4 pt-4 border-t border-border space-y-4">
                     <div className="flex items-center justify-between">
                       <Label className={labelClass}>Vehículo Asignado</Label>
                       <Button 
@@ -232,7 +235,7 @@ export function AddEntityModal({
                         ))}
                       </select>
                     ) : (
-                      <div className="space-y-3 p-3 bg-slate-50 rounded-lg border border-dashed border-slate-300 animate-in slide-in-from-top-2">
+                      <div className="space-y-3 p-3 bg-muted rounded-lg border border-dashed border-border animate-in slide-in-from-top-2">
                         <Input name="placa" placeholder="Placa (ABC-123)" value={vehiculoData.placa} onChange={handleVehiculoChange} className={inputClass} required />
                         <div className="grid grid-cols-2 gap-2">
                           <Input name="marca" placeholder="Marca" value={vehiculoData.marca} onChange={handleVehiculoChange} className={inputClass} />
@@ -326,13 +329,13 @@ export function AddEntityModal({
             </div>
           )}
 
-          <DialogFooter className="gap-2 sm:gap-0 mt-6 pt-4 border-t border-slate-100">
+          <DialogFooter className="gap-2 sm:gap-0 mt-6 pt-4 border-t border-border">
             <Button
               type="button"
               variant="ghost"
               onClick={onClose}
               disabled={loading}
-              className="text-slate-500 hover:bg-slate-100"
+              className="text-muted-foreground hover:bg-muted"
             >
               Cancelar
             </Button>

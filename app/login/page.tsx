@@ -62,7 +62,7 @@ export default function LoginPage() {
           <div className="p-10 space-y-8 animate-in slide-in-from-bottom-8 fade-in duration-700 delay-150 fill-mode-both">
             <div className="text-center space-y-2">
               <h2 className="text-3xl font-bold text-white tracking-tight">Bienvenido</h2>
-              <p className="text-zinc-500 text-sm">Ingrese sus credenciales para continuar</p>
+              <p className="text-zinc-300 text-sm">Ingrese sus credenciales para continuar</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -70,12 +70,12 @@ export default function LoginPage() {
                 {/* Usuario */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <Label htmlFor="username" className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                    <Label htmlFor="username" className="text-[10px] font-black uppercase tracking-widest text-zinc-300">
                       Ficha o Nombre de Usuario
                     </Label>
                   </div>
                   <div className="relative group">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-600 group-focus-within:text-[#CC1414] transition-colors" />
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-[#CC1414] transition-colors" />
                     <Input
                       id="username"
                       placeholder="Nombre de usuario o ID"
@@ -90,12 +90,12 @@ export default function LoginPage() {
                 {/* Contraseña */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center px-1">
-                    <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                    <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-zinc-300">
                       Contraseña
                     </Label>
                   </div>
                   <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-600 group-focus-within:text-[#CC1414] transition-colors" />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-[#CC1414] transition-colors" />
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
@@ -108,7 +108,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-white transition-colors"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
                     >
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
@@ -139,7 +139,7 @@ export default function LoginPage() {
             </form>
 
             <div className="text-center">
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-zinc-300">
                 ¿No tiene una cuenta?{" "}
                 <Link href="/register" className="text-[#CC1414] font-bold hover:underline">
                   Solicitar Acceso
