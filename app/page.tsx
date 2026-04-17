@@ -639,17 +639,13 @@ function MaterialPassForm() {
                   <FileText className="h-7 w-7 text-primary" />
                   {isEditing ? `EDITANDO PASE N° ${formData.folio}` : "NUEVO PASE"}
                 </div>
-                <div className="flex items-center gap-3">
-                  <Label htmlFor="folio-input" className="text-base font-black text-primary uppercase">
-                    N° PASE:
-                  </Label>
-                  <Input
-                    id="folio-input"
-                    className={cn("h-10 w-36 font-mono font-black text-xl text-center text-primary border-primary/40", readOnlyStyles)}
-                    value={formData.folio}
-                    readOnly
-                    tabIndex={-1}
-                  />
+                <div className="flex flex-col items-end gap-0 bg-primary/5 px-4 py-1 rounded-lg border-r-4 border-primary">
+                  <span className="text-[10px] font-black text-primary/60 uppercase tracking-[0.3em]">
+                    N° DE CONTROL
+                  </span>
+                  <span className="font-mono font-black text-4xl text-primary leading-none">
+                    {formData.folio}
+                  </span>
                 </div>
               </CardTitle>
             </CardHeader>

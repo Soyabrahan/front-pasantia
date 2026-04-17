@@ -484,10 +484,10 @@ export default function ConfigurationPage() {
                         <Card className="border-border shadow-sm animate-in fade-in zoom-in-95 duration-500">
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <div className="space-y-1">
-                                    <CardTitle>{isAdmin ? "Perfiles de Usuario" : "Configuración de mi Perfil"}</CardTitle>
+                                    <CardTitle>{isAdmin ? "Gestión de Usuarios y Mi Perfil" : "Configuración de mi Perfil"}</CardTitle>
                                     <CardDescription>
                                         {isAdmin 
-                                            ? "Listado de personas con permiso para entrar al sistema (Administradores y Emisores)." 
+                                            ? "Gestiona los usuarios del sistema y tu propia información de perfil." 
                                             : "Gestiona tu información personal y seguridad de tu cuenta."}
                                     </CardDescription>
                                 </div>
@@ -508,174 +508,182 @@ export default function ConfigurationPage() {
                             </CardHeader>
                             <CardContent>
                                 {isAdmin && (
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <div className="relative flex-1">
-                                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                            <Input
-                                                placeholder="Buscar por ficha o nombre..."
-                                                className="pl-8 border-slate-300"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                                {!isAdmin ? (
-                                    <div className="space-y-6 max-w-2xl">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-semibold">Nombre Completo</label>
-                                                {isEditingProfile ? (
-                                                    <Input 
-                                                        value={currentUser?.nombre} 
-                                                        onChange={e => setCurrentUser({...currentUser, nombre: e.target.value})}
-                                                    />
-                                                ) : (
-                                                    <div className="p-2 bg-muted/20 rounded border border-transparent">{currentUser?.nombre}</div>
-                                                )}
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-semibold">Ficha</label>
-                                                <div className="p-2 bg-muted/40 rounded border italic text-muted-foreground">{currentUser?.ficha}</div>
+                                    <div className="space-y-4 mb-8">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <div className="relative flex-1">
+                                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                                <Input
+                                                    placeholder="Buscar por ficha o nombre..."
+                                                    className="pl-8 border-slate-300"
+                                                />
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-wrap gap-3 pt-4 border-t">
-                                            {isEditingProfile ? (
-                                                <>
-                                                    <Button className="gap-2" onClick={() => handleUpdateCurrentUser(currentUser)}>
-                                                        <Save className="h-4 w-4" />
-                                                        Guardar Cambios
-                                                    </Button>
-                                                    <Button variant="ghost" className="gap-2" onClick={() => {
-                                                        setIsEditingProfile(false)
-                                                        // Opcional: recargar el perfil original si se desea descartar cambios locales
-                                                        api.get<any>("/auth/profile").then(p => setCurrentUser(p))
-                                                    }}>
-                                                        Cancelar
-                                                    </Button>
-                                                </>
-                                            ) : (
-                                                <Button className="gap-2" onClick={() => setIsEditingProfile(true)}>
-                                                    <Pencil className="h-4 w-4" />
-                                                    Editar Perfil
-                                                </Button>
-                                            )}
-                                            
-                                            <Button variant="outline" className="gap-2 text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100" onClick={() => {
-                                                setSelectedUserForPass(currentUser)
-                                                setIsPassModalOpen(true)
-                                            }}>
-                                                <Key className="h-4 w-4" />
-                                                Cambiar Contraseña
-                                            </Button>
-                                            <Button variant="ghost" className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => {
-                                                if(confirm("¿Estás seguro de que deseas borrar tu cuenta? Esta acción no se puede deshacer.")) {
-                                                    handleDeleteUsuario(currentUser.id).then(() => handleLogout())
-                                                }
-                                            }}>
-                                                <Trash2 className="h-4 w-4" />
-                                                Borrar Cuenta
-                                            </Button>
-                                            <Button variant="secondary" className="gap-2" onClick={handleLogout}>
-                                                <X className="h-4 w-4" />
-                                                Cerrar Sesión
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="rounded-md border border-border overflow-hidden">
-                                        <Table>
-                                            <TableHeader className="bg-muted/50">
-                                                    <TableRow className="bg-muted/50">
-                                                        <TableHead className="w-[120px]">Ficha</TableHead>
-                                                        <TableHead>Nombre Completo</TableHead>
-                                                        <TableHead>Rol en Sistema</TableHead>
-                                                        <TableHead className="text-right">Acciones</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {isAddingUsuario && (
-                                                        <TableRow className="bg-primary/5">
-                                                            <TableCell>
-                                                                <Input 
-                                                                    placeholder="Ficha..." 
-                                                                    className="h-8 text-xs"
-                                                                    value={newUsuario.ficha}
-                                                                    onChange={(e) => {
-                                                                        const ficha = e.target.value;
-                                                                        const emp = empleados.find(emp => emp.ficha === ficha);
-                                                                        setNewUsuario({
-                                                                            ...newUsuario,
-                                                                            ficha,
-                                                                            nombre: emp ? emp.nombre : ""
-                                                                        });
-                                                                    }}
-                                                                />
-                                                                {newUsuario.ficha && (
-                                                                    <div className="mt-2 p-2 bg-background/50 rounded border border-transparent">
-                                                                        <div className="text-[10px] font-bold text-primary">{newUsuario.nombre}</div>
-                                                                        <div className="text-[10px] text-muted-foreground italic">Ficha: {newUsuario.ficha}</div>
-                                                                        <div className="text-[10px] text-zinc-400 mt-1 uppercase font-bold tracking-tighter">
-                                                                            Contraseña: {newUsuario.rol === 'Administrador' ? 'admin' : '0000'} (Predefinida)
+                                        <div className="rounded-md border border-border overflow-hidden">
+                                            <Table>
+                                                <TableHeader className="bg-muted/50">
+                                                        <TableRow className="bg-muted/50">
+                                                            <TableHead className="w-[120px]">Ficha</TableHead>
+                                                            <TableHead>Nombre Completo</TableHead>
+                                                            <TableHead>Rol en Sistema</TableHead>
+                                                            <TableHead className="text-right">Acciones</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {isAddingUsuario && (
+                                                            <TableRow className="bg-primary/5">
+                                                                <TableCell>
+                                                                    <Input 
+                                                                        placeholder="Ficha..." 
+                                                                        className="h-8 text-xs"
+                                                                        value={newUsuario.ficha}
+                                                                        onChange={(e) => {
+                                                                            const ficha = e.target.value;
+                                                                            const emp = empleados.find(emp => emp.ficha === ficha);
+                                                                            setNewUsuario({
+                                                                                ...newUsuario,
+                                                                                ficha,
+                                                                                nombre: emp ? emp.nombre : ""
+                                                                            });
+                                                                        }}
+                                                                    />
+                                                                    {newUsuario.ficha && (
+                                                                        <div className="mt-2 p-2 bg-background/50 rounded border border-transparent">
+                                                                            <div className="text-[10px] font-bold text-primary">{newUsuario.nombre}</div>
+                                                                            <div className="text-[10px] text-muted-foreground italic">Ficha: {newUsuario.ficha}</div>
+                                                                            <div className="text-[10px] text-zinc-400 mt-1 uppercase font-bold tracking-tighter">
+                                                                                Contraseña: {newUsuario.rol === 'Administrador' ? 'admin' : '0000'} (Predefinida)
+                                                                            </div>
                                                                         </div>
+                                                                    )}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div className="text-sm font-medium">
+                                                                        {empleados.find(e => e.ficha === newUsuario.ficha)?.nombre || "---"}
                                                                     </div>
-                                                                )}
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <div className="text-sm font-medium">
-                                                                    {empleados.find(e => e.ficha === newUsuario.ficha)?.nombre || "---"}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div className="flex items-center gap-2 text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full w-fit">
+                                                                        <ShieldCheck className="h-3 w-3" />
+                                                                        Administrador
+                                                                    </div>
+                                                                </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex justify-end gap-2">
+                                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={handleSaveUsuario} disabled={!newUsuario.ficha}>
+                                                                        <Save className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => {
+                                                                        setIsAddingUsuario(false)
+                                                                        setNewUsuario({ ficha: "", nombre: "", rol: "Administrador", contrasena: "admin" })
+                                                                    }}>
+                                                                        <X className="h-4 w-4" />
+                                                                    </Button>
                                                                 </div>
                                                             </TableCell>
+                                                        </TableRow>
+                                                    )}
+                                                    {loading ? (
+                                                        <TableRow><TableCell colSpan={5} className="text-center">Cargando usuarios...</TableCell></TableRow>
+                                                    ) : usuarios.length === 0 ? (
+                                                        <TableRow><TableCell colSpan={5} className="text-center">No hay usuarios registrados.</TableCell></TableRow>
+                                                    ) : usuarios.filter(u => u.rol && u.rol !== "Ninguno").map((user) => (
+                                                        <TableRow key={user.id} className="hover:bg-muted/30 transition-colors">
+                                                            <TableCell className="font-mono font-medium">{user.ficha}</TableCell>
+                                                            <TableCell className="font-medium">
+                                                                {user.nombre}
+                                                            </TableCell>
                                                             <TableCell>
-                                                                <div className="flex items-center gap-2 text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full w-fit">
-                                                                    <ShieldCheck className="h-3 w-3" />
-                                                                    Administrador
+                                                                <Badge variant={user.rol === "Administrador" ? "default" : "secondary"}>
+                                                                    {user.rol}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex justify-end gap-2">
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => handleDeleteUsuario(user.id)}>
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
                                                                 </div>
                                                             </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <div className="flex justify-end gap-2">
-                                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={handleSaveUsuario} disabled={!newUsuario.ficha}>
-                                                                    <Save className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => {
-                                                                    setIsAddingUsuario(false)
-                                                                    setNewUsuario({ ficha: "", nombre: "", rol: "Administrador", contrasena: "admin" })
-                                                                }}>
-                                                                    <X className="h-4 w-4" />
-                                                                </Button>
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )}
-                                                {loading ? (
-                                                    <TableRow><TableCell colSpan={5} className="text-center">Cargando usuarios...</TableCell></TableRow>
-                                                ) : usuarios.length === 0 ? (
-                                                    <TableRow><TableCell colSpan={5} className="text-center">No hay usuarios registrados.</TableCell></TableRow>
-                                                ) : usuarios.filter(u => u.rol && u.rol !== "Ninguno").map((user) => (
-                                                    <TableRow key={user.id} className="hover:bg-muted/30 transition-colors">
-                                                        <TableCell className="font-mono font-medium">{user.ficha}</TableCell>
-                                                        <TableCell className="font-medium">
-                                                            {user.nombre}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Badge variant={user.rol === "Administrador" ? "default" : "secondary"}>
-                                                                {user.rol}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <div className="flex justify-end gap-2">
-                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => handleDeleteUsuario(user.id)}>
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
+                                                        </TableRow>
+                                                    ))}
 
-                                            </TableBody>
-                                        </Table>
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                        <div className="my-10 border-t border-border" />
                                     </div>
                                 )}
+
+                                <div className="space-y-6 max-w-2xl">
+                                    {isAdmin && (
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <User className="h-5 w-5 text-primary" />
+                                            <h3 className="text-lg font-bold">Mi Perfil Personal</h3>
+                                        </div>
+                                    )}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-semibold">Nombre Completo</label>
+                                            {isEditingProfile ? (
+                                                <Input 
+                                                    value={currentUser?.nombre} 
+                                                    onChange={e => setCurrentUser({...currentUser, nombre: e.target.value})}
+                                                />
+                                            ) : (
+                                                <div className="p-2 bg-muted/20 rounded border border-transparent">{currentUser?.nombre}</div>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-semibold">Ficha</label>
+                                            <div className="p-2 bg-muted/40 rounded border italic text-muted-foreground">{currentUser?.ficha}</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-3 pt-4 border-t">
+                                        {isEditingProfile ? (
+                                            <>
+                                                <Button className="gap-2" onClick={() => handleUpdateCurrentUser(currentUser)}>
+                                                    <Save className="h-4 w-4" />
+                                                    Guardar Cambios
+                                                </Button>
+                                                <Button variant="ghost" className="gap-2" onClick={() => {
+                                                    setIsEditingProfile(false)
+                                                    // Opcional: recargar el perfil original si se desea descartar cambios locales
+                                                    api.get<any>("/auth/profile").then(p => setCurrentUser(p))
+                                                }}>
+                                                    Cancelar
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <Button className="gap-2" onClick={() => setIsEditingProfile(true)}>
+                                                <Pencil className="h-4 w-4" />
+                                                Editar Perfil
+                                            </Button>
+                                        )}
+                                        
+                                        <Button variant="outline" className="gap-2 text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100" onClick={() => {
+                                            setSelectedUserForPass(currentUser)
+                                            setIsPassModalOpen(true)
+                                        }}>
+                                            <Key className="h-4 w-4" />
+                                            Cambiar Contraseña
+                                        </Button>
+                                        <Button variant="ghost" className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => {
+                                            if(confirm("¿Estás seguro de que deseas borrar tu cuenta? Esta acción no se puede deshacer.")) {
+                                                handleDeleteUsuario(currentUser.id).then(() => handleLogout())
+                                            }
+                                        }}>
+                                            <Trash2 className="h-4 w-4" />
+                                            Borrar Cuenta
+                                        </Button>
+                                        <Button variant="secondary" className="gap-2" onClick={handleLogout}>
+                                            <X className="h-4 w-4" />
+                                            Cerrar Sesión
+                                        </Button>
+                                    </div>
+                                </div>
+
                             </CardContent>
                         </Card>
                     </TabsContent>
