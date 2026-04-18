@@ -111,12 +111,14 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
               >
                 <div className="col-span-1">
                   <Input
-                    type="number"
+                    type="text"
                     placeholder="0"
                     value={item.cantidad}
-                    onChange={(e) => updateItem(item.id, "cantidad", e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      updateItem(item.id, "cantidad", val);
+                    }}
                     className={cn("text-center font-bold", inputStyles)}
-                    min="0"
                   />
                 </div>
                 <div className="col-span-2">
@@ -156,14 +158,19 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
                   >
                     <option value="Serial">Serial</option>
                     <option value="FMO">FMO</option>
-                    <option value="S/N">Ninguno</option>
                   </select>
                 </div>
                 <div className="col-span-2">
                   <Input
                     placeholder="Valores..."
                     value={item.identificadores}
-                    onChange={(e) => updateItem(item.id, "identificadores", e.target.value)}
+                    onChange={(e) => {
+                      let val = e.target.value;
+                      if (item.tipoIdentificador === "FMO") {
+                        val = val.replace(/[^0-9, ]/g, "");
+                      }
+                      updateItem(item.id, "identificadores", val);
+                    }}
                     className={cn("font-mono text-xs", inputStyles)}
                     disabled={item.tipoIdentificador === "S/N"}
                   />

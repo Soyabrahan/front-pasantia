@@ -229,7 +229,9 @@ export default function ConfigurationPage() {
 
     const handleUpdateVehiculo = async (id: number) => {
         try {
-            const conductorIdStr = editVehiculo.conductorId || (editVehiculo.conductores?.[0]?.id?.toString() || "");
+            const conductorIdStr = editVehiculo.conductorId !== undefined 
+                ? editVehiculo.conductorId 
+                : (editVehiculo.conductores?.[0]?.id?.toString() || "");
             
             if (conductorIdStr) {
                 const conductorId = parseInt(conductorIdStr);
@@ -282,7 +284,7 @@ export default function ConfigurationPage() {
             await api.delete(`/vehiculos/${id}`)
             setVehiculos(vehiculos.filter(v => v.id !== id))
         } catch (error) {
-            alert("Error al borrar")
+            alert("Error al borrar vehículo. (Verifique que no tenga pases asociados)");
         }
     }
 
@@ -367,6 +369,25 @@ export default function ConfigurationPage() {
             }
         } catch (error) {
             alert("Error de conexión al cambiar contraseña")
+        }
+    }
+
+    const handleResetPassword = async (userId: number) => {
+        const user = usuarios.find(u => u.id === userId);
+        if (!user) return;
+        
+        if (!confirm(`¿Estás seguro de resetear la contraseña de ${user.nombre}? La nueva contraseña será su ficha (${user.ficha}).`)) return;
+        
+        try {
+            const res = await api.patch<any>(`/usuarios/admin-reset-password/${userId}`, {});
+            if (res.success) {
+                toast.success("Contraseña reseteada correctamente");
+            } else {
+                toast.error("Error al resetear la contraseña");
+            }
+        } catch (error) {
+            console.error("Error resetting password:", error);
+            toast.error("Error de conexión al resetear contraseña");
         }
     }
 
@@ -600,6 +621,9 @@ export default function ConfigurationPage() {
                                                             </TableCell>
                                                             <TableCell className="text-right">
                                                                 <div className="flex justify-end gap-2">
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50" title="Resetear Contraseña" onClick={() => handleResetPassword(user.id)}>
+                                                                        <Key className="h-4 w-4" />
+                                                                    </Button>
                                                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => handleDeleteUsuario(user.id)}>
                                                                         <Trash2 className="h-4 w-4" />
                                                                     </Button>
@@ -731,11 +755,12 @@ export default function ConfigurationPage() {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Select value={newVehiculo.conductorId} onValueChange={(val) => setNewVehiculo({...newVehiculo, conductorId: val})}>
+                                                        <Select value={newVehiculo.conductorId || "none"} onValueChange={(val) => setNewVehiculo({...newVehiculo, conductorId: val === "none" ? "" : val})}>
                                                             <SelectTrigger className="h-8 text-xs">
                                                                 <SelectValue placeholder="Seleccionar..." />
                                                             </SelectTrigger>
                                                             <SelectContent>
+                                                                <SelectItem value="none"><span className="italic text-muted-foreground">Sin asignar</span></SelectItem>
                                                                 {empleados.filter(e => e.rol === "Conductor").map(e => (
                                                                     <SelectItem key={e.id} value={e.id.toString()}>
                                                                         {e.nombre}
@@ -773,11 +798,12 @@ export default function ConfigurationPage() {
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell>
-                                                                <Select value={editVehiculo.conductorId || (editVehiculo.conductores?.[0]?.id?.toString() || "")} onValueChange={(val) => setEditVehiculo({...editVehiculo, conductorId: val})}>
+                                                                <Select value={editVehiculo.conductorId !== undefined ? (editVehiculo.conductorId || "none") : (editVehiculo.conductores?.[0]?.id?.toString() || "none")} onValueChange={(val) => setEditVehiculo({...editVehiculo, conductorId: val === "none" ? "" : val})}>
                                                                     <SelectTrigger className="h-8 text-xs">
                                                                         <SelectValue placeholder="Seleccionar..." />
                                                                     </SelectTrigger>
                                                                     <SelectContent>
+                                                                        <SelectItem value="none"><span className="italic text-muted-foreground">Sin asignar</span></SelectItem>
                                                                         {empleados.filter(e => e.rol === "Conductor").map(e => (
                                                                             <SelectItem key={e.id} value={e.id.toString()}>
                                                                                 {e.nombre}

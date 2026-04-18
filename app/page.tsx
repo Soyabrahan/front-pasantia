@@ -690,7 +690,12 @@ function MaterialPassForm() {
                 <div className="flex flex-col gap-2">
                   <Popover open={openDestino} onOpenChange={setOpenDestino}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" className={cn("w-full h-12 justify-between text-lg font-medium", inputStyles)}>
+                      <Button 
+                        variant="outline" 
+                        role="combobox" 
+                        className={cn("w-full h-12 justify-between text-lg font-medium", inputStyles)}
+                        onKeyDown={(e) => { if (e.key === "Enter") setOpenDestino(true); }}
+                      >
                         <div className="flex items-center gap-2 truncate">
                           <Building2 className="h-5 w-5 text-primary/70" />
                           {formData.embargueseA || "Buscar o seleccionar destino..."}
@@ -783,7 +788,12 @@ function MaterialPassForm() {
                   <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">NOMBRE DEL CONDUCTOR</Label>
                   <Popover open={openConductor} onOpenChange={setOpenConductor}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" className={cn("w-full h-12 justify-between text-lg", inputStyles)}>
+                      <Button 
+                        variant="outline" 
+                        role="combobox" 
+                        className={cn("w-full h-12 justify-between text-lg", inputStyles)}
+                        onKeyDown={(e) => { if (e.key === "Enter") setOpenConductor(true); }}
+                      >
                         <div className="flex items-center gap-2 truncate">
                           <User className="h-5 w-5 text-primary/70" />
                           {formData.conductor || "Seleccionar conductor..."}
@@ -846,7 +856,12 @@ function MaterialPassForm() {
                   <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">VEHÍCULO (MARCA / MODELO / PLACA)</Label>
                   <Popover open={openVehiculoParticular} onOpenChange={setOpenVehiculoParticular}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" className={cn("w-full h-12 justify-between text-lg", inputStyles)}>
+                      <Button 
+                        variant="outline" 
+                        role="combobox" 
+                        className={cn("w-full h-12 justify-between text-lg", inputStyles)}
+                        onKeyDown={(e) => { if (e.key === "Enter") setOpenVehiculoParticular(true); }}
+                      >
                         <div className="flex items-center gap-2 truncate">
                           <Truck className="h-5 w-5 text-primary/70" />
                           {formData.vehiculoParticular || "Elegir vehículo..."}
@@ -927,7 +942,12 @@ function MaterialPassForm() {
                 <div className="flex flex-col gap-2">
                   <Popover open={openDespachador} onOpenChange={setOpenDespachador}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" className={cn("w-full h-12 justify-between text-lg", inputStyles)}>
+                      <Button 
+                        variant="outline" 
+                        role="combobox" 
+                        className={cn("w-full h-12 justify-between text-lg", inputStyles)}
+                        onKeyDown={(e) => { if (e.key === "Enter") setOpenDespachador(true); }}
+                      >
                         <div className="flex items-center gap-2 truncate">
                           <Search className="h-5 w-5 text-primary/70" />
                           {formData.despachadoPor || "Seleccionar..."}
@@ -998,7 +1018,12 @@ function MaterialPassForm() {
                 <div className="flex flex-col gap-2">
                   <Popover open={openSolicitante} onOpenChange={setOpenSolicitante}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" className={cn("w-full h-12 justify-between text-lg", inputStyles)}>
+                      <Button 
+                        variant="outline" 
+                        role="combobox" 
+                        className={cn("w-full h-12 justify-between text-lg", inputStyles)}
+                        onKeyDown={(e) => { if (e.key === "Enter") setOpenSolicitante(true); }}
+                      >
                         <div className="flex items-center gap-2 truncate">
                           <UserCheck className="h-5 w-5 text-primary/70" />
                           {formData.solicitante || "Seleccionar..."}

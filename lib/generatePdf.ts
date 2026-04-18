@@ -95,14 +95,14 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
 
     // Helper for rectangles
     const rect = (x: number, y: number, w: number, h: number, style?: string) => {
-        doc.setLineWidth(0.3);
+        doc.setLineWidth(0.2);
         doc.rect(x, y, w, h, style);
     };
 
     // --- MAIN BORDER ---
-    doc.setLineWidth(1);
+    doc.setLineWidth(0.5);
     doc.rect(margin, margin, contentW, contentH);
-    doc.setLineWidth(0.3);
+    doc.setLineWidth(0.2);
 
     // ============================================
     // HEADER SECTION (Top)
@@ -139,7 +139,8 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT('PASE PARA MATERIALES Y MISCELÁNEOS', margin + logoBoxW + (contentW - logoBoxW) / 2, margin + 12, 14, 'bold', 'center');
 
     // Number (N. 86471)
-    drawT(`N.º ${formData.numeroPase || '-----'}`, margin + contentW - 5, margin + 20, 18, 'bold', 'right');
+    doc.setFont('helvetica', 'bold');
+    drawT(`N.º ${formData.numeroPase || '-----'}`, margin + contentW - 5, margin + 20, 16, 'bold', 'right');
 
     // ============================================
     // MIDDLE SECTION (Concept / Data)
@@ -180,9 +181,8 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     checkboxes.forEach((c) => {
         rect(margin + 5, cy, 3, 3);
         drawT(c.l, margin + 9, cy + 2.3, 6);
-        // @ts-ignore
-        if (formData.concepto && formData.concepto[c.k]) {
-            drawT('X', margin + 5.5, cy + 2.2, 7, 'bold');
+        if (formData.concepto && formData.concepto[c.k as keyof Conceptos]) {
+            drawT('X', margin + 6.5, cy + 2.5, 8, 'bold', 'center');
         }
         cy += 4;
     });
@@ -237,13 +237,13 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT('TELÉFONO:', telX + 1.5, row2Y + 3.5, 6.5, 'normal');
     drawT(formData.telefono, telX + 1.5, row2Y + 8.5, 8, 'bold', 'left', (contX - telX) - 3);
 
-    drawT('CONTADO:', contX + 1.5, row2Y + 3.5, 5.5, 'normal');
-    if (formData.contado) drawT('X', contX + 8, row2Y + 8, 8, 'bold', 'center');
-    doc.line(contX + 1, row2Y + 7.5, contX + 16, row2Y + 7.5);
+    drawT('CONTADO:', contX + 2, row2Y + 4, 5.5, 'normal');
+    rect(contX + 14, row2Y + 1.5, 3, 3);
+    if (formData.contado) drawT('X', contX + 15.5, row2Y + 4, 8, 'bold', 'center');
 
-    drawT('CRÉDITO:', credX + 1.5, row2Y + 3.5, 5.5, 'normal');
-    if (formData.credito) drawT('X', credX + 8, row2Y + 8, 8, 'bold', 'center');
-    doc.line(credX + 1, row2Y + 7.5, credX + 16, row2Y + 7.5);
+    drawT('CRÉDITO:', credX + 2, row2Y + 4, 5.5, 'normal');
+    rect(credX + 14, row2Y + 1.5, 3, 3);
+    if (formData.credito) drawT('X', credX + 15.5, row2Y + 4, 8, 'bold', 'center');
 
     // Row 3: CONDUCTOR | FICHA | VEH FMO | VEH PART
     const row3Y = row2Y + rowH;
@@ -337,10 +337,10 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT('FICHA:', margin + 1.5, authY + 28, 6, 'normal');
     drawT(formData.fichaAutorizador || '15508', margin + 12, authY + 28, 8, 'bold');
 
-    drawT('LUGAR Y FECHA DE EMISIÓN:', margin + 1.5, authY + 33.5, 5.5, 'normal');
+    drawT('LUGAR Y FECHA DE EMISIÓN:', margin + 2, authY + 33.5, 5.5, 'normal');
     const today = new Date();
     const formattedDate = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
-    drawT(`PUERTO ORDAZ, ${formattedDate}`, margin + 35, authY + 33.5, 6.5, 'bold', 'left', (rightX - margin - 35) - 3);
+    drawT(`CIUDAD GUAYANA, ${formattedDate}`, margin + 35, authY + 33.5, 6.5, 'bold', 'left', (rightX - margin - 35) - 3);
 
     // ============================================
     // BOTTOM SECTION (Table + Proteccion)
@@ -352,20 +352,20 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     const sigMidX = margin + matW + (sigW / 2);
 
     drawT('CANTIDAD', margin + 7.5, tableY + 6, 7, 'bold', 'center');
-    drawT('UNIDAD', margin + 25, tableY + 6, 7, 'bold', 'center');
-    drawT('DESCRIPCIÓN (INCLUYA MARCA Y SERIAL)', margin + 37, tableY + 6, 7, 'bold');
+    drawT('UNIDAD', margin + 22.5, tableY + 6, 7, 'bold', 'center');
+    drawT('DESCRIPCIÓN (INCLUYA MARCA Y SERIAL)', margin + 32, tableY + 6, 7, 'bold');
 
-    drawT('DEPARTAMENTO DE PROTECCIÓN INDUSTRIAL', margin + matW + (sigW / 4), tableY + 4.5, 5, 'bold', 'center');
-    drawT('DEPARTAMENTO DE PROTECCIÓN DE BUQUES E', sigMidX + (sigW / 4), tableY + 4, 5, 'bold', 'center');
-    drawT('INSTALACIONES PORTUARIAS', sigMidX + (sigW / 4), tableY + 7, 5, 'bold', 'center');
+    drawT('DEPARTAMENTO DE PROTECCIÓN INDUSTRIAL', margin + matW + (sigW / 4), tableY + 4.5, 7, 'bold', 'center');
+    drawT('DEPARTAMENTO DE PROTECCIÓN DE BUQUES E', sigMidX + (sigW / 4), tableY + 4, 7, 'bold', 'center');
+    drawT('INSTALACIONES PORTUARIAS', sigMidX + (sigW / 4), tableY + 7, 7, 'bold', 'center');
 
     let ry = tableY + tableHeaderH;
     const itemsToShow = items.slice(0, 6);
 
-    for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 6; i++) {
         const item = itemsToShow[i];
         let rowH = 9.6;
-        const startX = margin + 35;
+        const startX = margin + 30;
         const endX = margin + matW;
         const colW = (endX - startX) - 4;
         let lines: string[] = [];
@@ -388,11 +388,11 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
         
         if (item && lines.length > 0) {
             drawT(String(item.cantidad), margin + 7.5, ry + (rowH / 2) + 1.5, 8, 'bold', 'center');
-            drawT(item.unidad.toUpperCase(), margin + 25, ry + (rowH / 2) + 1.5, 8, 'bold', 'center');
+            drawT(item.unidad.toUpperCase(), margin + 22.5, ry + (rowH / 2) + 1.5, 8, 'bold', 'center');
 
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(8);
-            doc.text(lines, margin + 37, ry + 5);
+            doc.text(lines, margin + 32, ry + 5);
         }
 
         ry += rowH;
@@ -404,7 +404,7 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     rect(margin, tableY, contentW, finalTableH);
     doc.line(margin, tableY + tableHeaderH, margin + contentW, tableY + tableHeaderH);
     doc.line(margin + 15, tableY, margin + 15, tableEnd);
-    doc.line(margin + 35, tableY, margin + 35, tableEnd);
+    doc.line(margin + 30, tableY, margin + 30, tableEnd);
     doc.line(margin + matW, tableY, margin + matW, tableEnd);
     doc.line(sigMidX, tableY, sigMidX, tableEnd);
 
@@ -466,16 +466,18 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT(footerTextLeft1, margin + 1.5, footerStartY + 3.5, 6, 'bold');
     drawT(footerTextLeft2, margin + 1.5, footerStartY + 7, 6, 'bold');
 
-    // Reposition Right Text (Distributed Top, Middle, Bottom)
     const bulletX = lineX + 2.5;
     const bulletFontSize = 5.5;
     
     // Top
-    drawT('•  TODO VEHÍCULO DEBE SER INSPECCIONADO EN LOS PORTONES.', bulletX, footerStartY + 3.5, bulletFontSize, 'normal');
+    rect(bulletX, footerStartY + 1.5, 2.5, 2.5);
+    drawT('TODO VEHÍCULO DEBE SER INSPECCIONADO EN LOS PORTONES.', bulletX + 4, footerStartY + 3.5, bulletFontSize, 'normal');
     // Middle
-    drawT('•  LOS ESPACIOS EN BLANCO NO APLICAN', bulletX, footerStartY + (footerH / 2) + 1, bulletFontSize, 'normal');
+    rect(bulletX, footerStartY + (footerH / 2) - 1, 2.5, 2.5);
+    drawT('LOS ESPACIOS EN BLANCO NO APLICAN', bulletX + 4, footerStartY + (footerH / 2) + 1, bulletFontSize, 'normal');
     // Bottom
-    drawT('•  NO SE ACEPTAN ENMIENDAS', bulletX, footerEndY - 3, bulletFontSize, 'normal');
+    rect(bulletX, footerEndY - 5, 2.5, 2.5);
+    drawT('NO SE ACEPTAN ENMIENDAS', bulletX + 4, footerEndY - 3, bulletFontSize, 'normal');
 
     const pdfBlob = doc.output('blob');
     const url = URL.createObjectURL(pdfBlob);

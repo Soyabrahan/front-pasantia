@@ -71,7 +71,13 @@ export function AddEntityModal({
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
 
   const handleEmpleadoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEmpleadoData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    if (name === "ficha") {
+      const numericVal = value.replace(/\D/g, "");
+      setEmpleadoData((prev) => ({ ...prev, [name]: numericVal }));
+    } else {
+      setEmpleadoData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleDestinoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,7 +86,12 @@ export function AddEntityModal({
 
   const handleVehiculoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target as HTMLInputElement;
-    setVehiculoData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    if (name === "fmo") {
+      const numericVal = value.replace(/\D/g, "");
+      setVehiculoData((prev) => ({ ...prev, [name]: numericVal }));
+    } else {
+      setVehiculoData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
