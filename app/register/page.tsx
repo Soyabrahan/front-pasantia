@@ -96,10 +96,10 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
-              {/* Nombre Completo */}
+              {/* Nombre de usuario */}
               <div className="space-y-2">
                 <Label htmlFor="nombre" className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                  Nombre Completo
+                  Nombre de Usuario
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />

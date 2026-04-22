@@ -102,13 +102,19 @@ export function AddEntityModal({
     try {
       let result: any;
       if (type === "empleado") {
-        if (!empleadoData.ficha || !empleadoData.nombre) {
-          throw new Error("La Ficha y el Nombre son obligatorios");
+        if (!empleadoData.ficha || !empleadoData.nombre || !empleadoData.departamento || (role !== "Conductor" && !empleadoData.cargo)) {
+          throw new Error("Todos los campos del empleado son obligatorios");
         }
         result = await api.post<{ id: string | number }>("/empleados", { ...empleadoData, rol: role });
         
         // Si es conductor y se seleccionó/creó vehículo, asignar
         if (role === "Conductor") {
+           if (showVehicleFields) {
+              if (!vehiculoData.placa || !vehiculoData.marca || !vehiculoData.modelo || (vehiculoData.esFMO && !vehiculoData.fmo)) {
+                throw new Error("Todos los campos del vehículo son obligatorios");
+              }
+           }
+
            const vehicleToAssign = showVehicleFields 
              ? await api.post<{ id: string | number }>("/vehiculos", vehiculoData) 
              : (selectedVehicleId ? { id: parseInt(selectedVehicleId) } : null);
@@ -118,13 +124,13 @@ export function AddEntityModal({
            }
         }
       } else if (type === "destino") {
-        if (!destinoData.nombre || !destinoData.direccion) {
-          throw new Error("El Nombre y la Dirección son obligatorios");
+        if (!destinoData.nombre || !destinoData.direccion || !destinoData.telefono) {
+          throw new Error("Todos los campos del destino son obligatorios");
         }
         result = await api.post("/destinos", destinoData);
       } else if (type === "vehiculo") {
-        if (!vehiculoData.placa && !vehiculoData.fmo) {
-          throw new Error("Debe ingresar la Placa o el Número FMO");
+        if (!vehiculoData.placa || !vehiculoData.marca || !vehiculoData.modelo || (vehiculoData.esFMO && !vehiculoData.fmo)) {
+          throw new Error("Todos los campos del vehículo son obligatorios");
         }
         result = await api.post("/vehiculos", vehiculoData);
       }
@@ -164,7 +170,7 @@ export function AddEntityModal({
               <div className="grid grid-cols-1 gap-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="ficha" className={labelClass}>
-                    Ficha
+                    Ficha <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="ficha"
@@ -178,7 +184,7 @@ export function AddEntityModal({
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="nombre" className={labelClass}>
-                    Nombre
+                    Nombre <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="nombre"
@@ -192,7 +198,7 @@ export function AddEntityModal({
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="departamento" className={cn(labelClass, "text-[10px]")}>
-                    Depto.
+                    Depto. <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="departamento"
@@ -201,12 +207,13 @@ export function AddEntityModal({
                     value={empleadoData.departamento}
                     onChange={handleEmpleadoChange}
                     className={cn("col-span-3", inputClass)}
+                    required
                   />
                 </div>
                 {role !== "Conductor" && (
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="cargo" className={labelClass}>
-                      Cargo
+                      Cargo <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="cargo"
@@ -215,6 +222,7 @@ export function AddEntityModal({
                       value={empleadoData.cargo}
                       onChange={handleEmpleadoChange}
                       className={cn("col-span-3", inputClass)}
+                      required
                     />
                   </div>
                 )}
@@ -247,15 +255,15 @@ export function AddEntityModal({
                       </select>
                     ) : (
                       <div className="space-y-3 p-3 bg-muted rounded-lg border border-dashed border-border animate-in slide-in-from-top-2">
-                        <Input name="placa" placeholder="Placa (ABC-123)" value={vehiculoData.placa} onChange={handleVehiculoChange} className={inputClass} required />
+                        <Input name="placa" placeholder="Placa (ABC-123) *" value={vehiculoData.placa} onChange={handleVehiculoChange} className={inputClass} required />
                         <div className="grid grid-cols-2 gap-2">
-                          <Input name="marca" placeholder="Marca" value={vehiculoData.marca} onChange={handleVehiculoChange} className={inputClass} />
-                          <Input name="modelo" placeholder="Modelo" value={vehiculoData.modelo} onChange={handleVehiculoChange} className={inputClass} />
+                          <Input name="marca" placeholder="Marca *" value={vehiculoData.marca} onChange={handleVehiculoChange} className={inputClass} required />
+                          <Input name="modelo" placeholder="Modelo *" value={vehiculoData.modelo} onChange={handleVehiculoChange} className={inputClass} required />
                         </div>
                         <div className="flex items-center gap-2">
                           <input type="checkbox" id="esFMO_modal" name="esFMO" checked={vehiculoData.esFMO} onChange={handleVehiculoChange} />
                           <Label htmlFor="esFMO_modal" className="text-xs">¿Es Vehículo FMO?</Label>
-                          {vehiculoData.esFMO && <Input name="fmo" placeholder="N° FMO" value={vehiculoData.fmo} onChange={handleVehiculoChange} className={cn("h-7 w-24 text-[10px]", inputClass)} />}
+                          {vehiculoData.esFMO && <Input name="fmo" placeholder="N° FMO *" value={vehiculoData.fmo} onChange={handleVehiculoChange} className={cn("h-7 w-24 text-[10px]", inputClass)} required />}
                         </div>
                       </div>
                     )}
@@ -266,7 +274,7 @@ export function AddEntityModal({
               <div className="grid grid-cols-1 gap-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="nombre_dest" className={labelClass}>
-                    Nombre
+                    Nombre <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="nombre_dest"
@@ -280,7 +288,7 @@ export function AddEntityModal({
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="direccion" className={labelClass}>
-                    Ubicación
+                    Ubicación <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="direccion"
@@ -294,7 +302,7 @@ export function AddEntityModal({
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="telefono" className={labelClass}>
-                    Teléfono
+                    Teléfono <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="telefono"
@@ -303,22 +311,23 @@ export function AddEntityModal({
                     value={destinoData.telefono}
                     onChange={handleDestinoChange}
                     className={cn("col-span-3", inputClass)}
+                    required
                   />
                 </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4">
                  <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="placa_v" className={labelClass}>Placa</Label>
+                  <Label htmlFor="placa_v" className={labelClass}>Placa <span className="text-destructive">*</span></Label>
                   <Input id="placa_v" name="placa" placeholder="Placa" value={vehiculoData.placa} onChange={handleVehiculoChange} className={cn("col-span-3 uppercase", inputClass)} required />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="marca_v" className={labelClass}>Marca</Label>
-                  <Input id="marca_v" name="marca" placeholder="Ej. Toyota" value={vehiculoData.marca} onChange={handleVehiculoChange} className={cn("col-span-3", inputClass)} />
+                  <Label htmlFor="marca_v" className={labelClass}>Marca <span className="text-destructive">*</span></Label>
+                  <Input id="marca_v" name="marca" placeholder="Ej. Toyota" value={vehiculoData.marca} onChange={handleVehiculoChange} className={cn("col-span-3", inputClass)} required />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="modelo_v" className={labelClass}>Modelo</Label>
-                  <Input id="modelo_v" name="modelo" placeholder="Ej. Hilux" value={vehiculoData.modelo} onChange={handleVehiculoChange} className={cn("col-span-3", inputClass)} />
+                  <Label htmlFor="modelo_v" className={labelClass}>Modelo <span className="text-destructive">*</span></Label>
+                  <Input id="modelo_v" name="modelo" placeholder="Ej. Hilux" value={vehiculoData.modelo} onChange={handleVehiculoChange} className={cn("col-span-3", inputClass)} required />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label className={labelClass}>Tipo</Label>
@@ -327,7 +336,7 @@ export function AddEntityModal({
                       <input type="checkbox" id="esFMO_only" name="esFMO" checked={vehiculoData.esFMO} onChange={handleVehiculoChange} />
                       <Label htmlFor="esFMO_only" className="text-xs">FMO</Label>
                     </div>
-                    {vehiculoData.esFMO && <Input name="fmo" placeholder="N° FMO" value={vehiculoData.fmo} onChange={handleVehiculoChange} className={cn("h-8 w-24 text-xs", inputClass)} />}
+                    {vehiculoData.esFMO && <Input name="fmo" placeholder="N° FMO *" value={vehiculoData.fmo} onChange={handleVehiculoChange} className={cn("h-8 w-24 text-xs", inputClass)} required />}
                   </div>
                 </div>
               </div>

@@ -73,22 +73,22 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
         {/* Table Header */}
         <div className="grid grid-cols-12 gap-2 p-4 bg-muted/40 border-b-2 border-border">
           <div className="col-span-1 text-xs font-black text-foreground/80 uppercase tracking-tighter text-center">
-            Cant.
+            Cant. *
           </div>
           <div className="col-span-2 text-xs font-black text-foreground/80 uppercase tracking-tighter">
-            Unidad
+            Unidad *
           </div>
           <div className="col-span-2 text-xs font-black text-foreground/80 uppercase tracking-tighter">
             Marca
           </div>
           <div className="col-span-2 text-xs font-black text-foreground/80 uppercase tracking-tighter">
-            Producto
+            Producto *
           </div>
           <div className="col-span-2 text-xs font-black text-foreground/80 uppercase tracking-tighter">
-            ID Por
+            ID Por *
           </div>
           <div className="col-span-2 text-xs font-black text-foreground/80 uppercase tracking-tighter">
-            Valores
+            Valores *
           </div>
           <div className="col-span-1 text-xs font-black text-foreground/80 uppercase tracking-tighter text-center">
             
@@ -158,6 +158,7 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
                   >
                     <option value="Serial">Serial</option>
                     <option value="FMO">FMO</option>
+                    <option value="S/N">S/N</option>
                   </select>
                 </div>
                 <div className="col-span-2">

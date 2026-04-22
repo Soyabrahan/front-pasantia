@@ -21,7 +21,9 @@ import {
     Settings2,
     FileText,
     UserCheck,
-    Hash
+    Hash,
+    Eye,
+    EyeOff
 } from "lucide-react"
 import {
     DropdownMenu,
@@ -120,6 +122,8 @@ export default function ConfigurationPage() {
     const [isPassModalOpen, setIsPassModalOpen] = useState(false)
     const [selectedUserForPass, setSelectedUserForPass] = useState<any>(null)
     const [passData, setPassData] = useState({ currentPass: "", newPass: "" })
+    const [showCurrentPass, setShowCurrentPass] = useState(false)
+    const [showNewPass, setShowNewPass] = useState(false)
 
     const fetchAll = async () => {
         setLoading(true)
@@ -164,6 +168,25 @@ export default function ConfigurationPage() {
     const handleSaveAjustes = () => {
         localStorage.setItem("fmo_pases_settings", JSON.stringify(ajustes))
         toast.success("Ajustes guardados correctamente")
+    }
+
+    const handleFetchLastNumber = async () => {
+        try {
+            const data = await api.get<{ numeroPase: string }>("/pases/ultimo-numero");
+            if (data && data.numeroPase) {
+                const currentNum = parseInt(data.numeroPase.replace(/\D/g, ""));
+                if (!isNaN(currentNum)) {
+                    const nextNum = (currentNum + 1).toString().padStart(data.numeroPase.length, "0");
+                    setAjustes({...ajustes, ultimoFolio: nextNum});
+                    toast.info(`Número sugerido: ${nextNum}`);
+                    return;
+                }
+            }
+            setAjustes({...ajustes, ultimoFolio: "00001"});
+        } catch (error) {
+            console.error("Error fetching last number:", error);
+            toast.error("No se pudo obtener el último número del servidor");
+        }
     }
 
     const handleSaveUsuario = async () => {
@@ -364,6 +387,8 @@ export default function ConfigurationPage() {
                 alert("Contraseña actualizada con éxito")
                 setIsPassModalOpen(false)
                 setPassData({ currentPass: "", newPass: "" })
+                setShowCurrentPass(false)
+                setShowNewPass(false)
             } else {
                 alert(res.message || "Error al actualizar la contraseña")
             }
@@ -480,11 +505,23 @@ export default function ConfigurationPage() {
                                             <Hash className="h-4 w-4" />
                                             Corregir Número de Pase (Folio)
                                         </Label>
-                                        <Input 
-                                            placeholder="Ej: 0050"
-                                            value={ajustes.ultimoFolio} 
-                                            onChange={e => setAjustes({...ajustes, ultimoFolio: e.target.value})}
-                                        />
+                                        <div className="flex gap-2">
+                                            <Input 
+                                                placeholder="Ej: 0050"
+                                                className="flex-1"
+                                                value={ajustes.ultimoFolio} 
+                                                onChange={e => setAjustes({...ajustes, ultimoFolio: e.target.value})}
+                                            />
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                type="button"
+                                                onClick={handleFetchLastNumber}
+                                                className="shrink-0"
+                                            >
+                                                Usar último número
+                                            </Button>
+                                        </div>
                                         <p className="text-[10px] text-muted-foreground italic">
                                             * Use esto solo si necesita reiniciar o saltar la numeración automática.
                                         </p>
@@ -1114,28 +1151,52 @@ export default function ConfigurationPage() {
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Contraseña Actual</label>
-                            <Input 
-                                type="password" 
-                                placeholder="Escribe la contraseña actual..."
-                                value={passData.currentPass} 
-                                onChange={e => setPassData({...passData, currentPass: e.target.value})} 
-                            />
+                            <div className="relative">
+                                <Input 
+                                    type={showCurrentPass ? "text" : "password"} 
+                                    placeholder="Escribe la contraseña actual..."
+                                    value={passData.currentPass} 
+                                    onChange={e => setPassData({...passData, currentPass: e.target.value})} 
+                                    className="pr-10"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCurrentPass(!showCurrentPass)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                >
+                                    {showCurrentPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                            </div>
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Nueva Contraseña</label>
-                            <Input 
-                                type="password" 
-                                placeholder="Escribe la nueva contraseña..."
-                                value={passData.newPass} 
-                                onChange={e => setPassData({...passData, newPass: e.target.value})} 
-                            />
+                            <div className="relative">
+                                <Input 
+                                    type={showNewPass ? "text" : "password"} 
+                                    placeholder="Escribe la nueva contraseña..."
+                                    value={passData.newPass} 
+                                    onChange={e => setPassData({...passData, newPass: e.target.value})} 
+                                    className="pr-10"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowNewPass(!showNewPass)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                >
+                                    {showNewPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                            </div>
                         </div>
                         <p className="text-[10px] text-muted-foreground italic">
                             * Se validará la contraseña actual antes de aplicar el cambio.
                         </p>
                     </div>
                     <DialogFooter className="sm:justify-between">
-                        <Button variant="ghost" onClick={() => setIsPassModalOpen(false)}>Cancelar</Button>
+                        <Button variant="ghost" onClick={() => {
+                            setIsPassModalOpen(false)
+                            setShowCurrentPass(false)
+                            setShowNewPass(false)
+                        }}>Cancelar</Button>
                         <Button variant="default" onClick={handleChangePassword} disabled={!passData.currentPass || !passData.newPass}>
                             Guardar Cambios
                         </Button>

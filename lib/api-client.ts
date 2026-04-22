@@ -35,7 +35,13 @@ export async function apiRequest<T>(
     });
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let errorData: any = {};
+        try {
+            errorData = await response.json();
+        } catch (e) {
+            // No JSON body
+        }
+
         if (response.status === 401) {
             console.warn("Error de autenticación: El token ha expirado o no es válido.");
             if (typeof window !== 'undefined') {
@@ -43,7 +49,10 @@ export async function apiRequest<T>(
                 window.location.href = '/login';
             }
         }
-        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+        
+        const errorMessage = errorData.message || `Error ${response.status}: ${response.statusText}`;
+        console.error(`[API Error] ${options.method || 'GET'} ${endpoint} - ${errorMessage}`, errorData);
+        throw new Error(errorMessage);
     }
 
     return response.json();

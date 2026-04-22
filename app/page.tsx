@@ -50,13 +50,11 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Header } from "@/components/header";
+import { api } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
+import { AddEntityModal } from "@/components/add-entity-modal";
+
 import {
   Dialog,
   DialogContent,
@@ -65,14 +63,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
-import { Header } from "@/components/header";
-
-import { api } from "@/lib/api-client";
-import { AddEntityModal } from "@/components/add-entity-modal";
 
 interface Destino {
-  id: string | number;
+  id: number;
   nombre: string;
   direccion: string;
   telefono: string;
@@ -104,7 +97,7 @@ function MaterialPassForm() {
     hora: "",
 
     // Concept Options
-    conceptoOpcion: "PRESTAMO",
+    conceptoOpcion: "",
 
     // Shipping / General Info
     tiempoEstimado: "",
@@ -135,7 +128,6 @@ function MaterialPassForm() {
     // Observations / Request
 
     solicitud: "",
-    observaciones: "",
 
     // Applicant Info
     solicitante: "",
@@ -146,55 +138,123 @@ function MaterialPassForm() {
 
   const fetchUltimoNumero = async () => {
     try {
-      // 1. Check if there's a manual override in localStorage
+      // 1. Check if there's a manual override in sessionStorage (clears on refresh)
+      const sessionFolio = sessionStorage.getItem("fmo_folio_override");
+      
+      // 2. Check localStorage for initial setting from Configuration view
       const savedAjustes = localStorage.getItem("fmo_pases_settings");
+      let startFolio = sessionFolio;
+
       if (savedAjustes) {
         const settings = JSON.parse(savedAjustes);
         if (settings.ultimoFolio) {
-          handleInputChange("folio", settings.ultimoFolio);
-          return settings.ultimoFolio;
+          startFolio = settings.ultimoFolio;
+          // Move from localStorage to sessionStorage so it persists for this session
+          sessionStorage.setItem("fmo_folio_override", startFolio);
+          // Clear from localStorage so it's not reused after a hard refresh/re-entry
+          settings.ultimoFolio = "";
+          localStorage.setItem("fmo_pases_settings", JSON.stringify(settings));
         }
       }
 
-      // 2. Otherwise fetch from API
-      const result = await api.get<{ numeroPase: string | null }>("/pases/ultimo-numero");
-      if (result && result.numeroPase) {
-        const lastNumStr = String(result.numeroPase);
-        const baseNum = parseInt(lastNumStr.replace(/\D/g, ""));
-        if (!isNaN(baseNum)) {
-          const nextNum = (baseNum + 1).toString().padStart(lastNumStr.length, "0");
-          handleInputChange("folio", nextNum);
-          return nextNum;
-        } else {
-          handleInputChange("folio", lastNumStr);
-          return lastNumStr;
-        }
-      } else {
-        handleInputChange("folio", "0001");
-        return "0001";
+      if (startFolio) {
+        setFormData(prev => ({ ...prev, folio: startFolio }));
+        return;
       }
+
+      // 3. API call with internal fallback for 500/errors
+      try {
+        const data = await api.get<{ numeroPase: string }>("/pases/ultimo-numero");
+        if (data && data.numeroPase) {
+          const currentNum = parseInt(data.numeroPase.replace(/\D/g, ""));
+          if (!isNaN(currentNum)) {
+            const nextNum = (currentNum + 1).toString().padStart(data.numeroPase.length, "0");
+            setFormData(prev => ({ ...prev, folio: nextNum }));
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("No se pudo obtener el último pase desde /ultimo-numero, buscando en el historial...", e);
+        try {
+          // Fallback: Fetch all pases and get LAST record's number + 1
+          const pases = await api.get<any[]>("/pases");
+          if (pases && pases.length > 0) {
+            const lastPase = pases[pases.length - 1];
+            const lastNum = parseInt(String(lastPase.numeroPase).replace(/\D/g, ""));
+            
+            if (!isNaN(lastNum)) {
+              const nextNum = (lastNum + 1).toString().padStart(5, "0");
+              setFormData(prev => ({ ...prev, folio: nextNum }));
+              return;
+            }
+          }
+        } catch (historyError) {
+          console.error("Error al buscar en el historial:", historyError);
+        }
+      }
+
+      setFormData(prev => ({ ...prev, folio: "00001" }));
     } catch (error) {
-      console.error("Error al cargar último número:", error);
-      handleInputChange("folio", "0001");
-      return "0001";
+      console.error("Error al obtener el último número:", error);
+      setFormData(prev => ({ ...prev, folio: "00001" }));
     }
   };
 
+  const handleInputChange = (field: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const [items, setItems] = useState<MaterialItem[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const [openDestino, setOpenDestino] = useState(false);
+  const [openConductor, setOpenConductor] = useState(false);
+  const [openVehiculo, setOpenVehiculo] = useState(false);
+  const [openDespachador, setOpenDespachador] = useState(false);
+  const [openSolicitante, setOpenSolicitante] = useState(false);
+  const [isChangingVehicle, setIsChangingVehicle] = useState(false);
+
+  const [modalType, setModalType] = useState<"destino" | "empleado" | "vehiculo" | null>(null);
+  const [modalRole, setModalRole] = useState<string | null>(null);
+
+  const openAddModal = (type: "destino" | "empleado" | "vehiculo", role?: string) => {
+    setModalType(type);
+    setModalRole(role || null);
+  };
+
   useEffect(() => {
-    setMounted(true);
-    
+    const today = new Date();
+    const formattedDate = today.toISOString().split("T")[0];
+    const formattedTime = today.toLocaleTimeString("es-ES", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    setFormData((prev) => ({
+      ...prev,
+      fecha: formattedDate,
+      hora: formattedTime,
+    }));
+
+    if (!editId) {
+      fetchUltimoNumero();
+    }
+  }, []);
+
+  useEffect(() => {
     if (editId) {
       loadEditData(editId);
     } else {
-      // Initialize normally if not editing
+      setIsEditing(false);
       const savedAjustes = localStorage.getItem("fmo_pases_settings");
       if (savedAjustes) {
         const settings = JSON.parse(savedAjustes);
         setFormData(prev => ({
           ...prev,
-          autorizadoPor: settings.gerenteNombre || prev.autorizadoPor,
-          cargoAutorizador: settings.gerenteCargo || prev.cargoAutorizador,
-          fichaAutorizador: settings.gerenteFicha || prev.fichaAutorizador,
+          autorizadoPor: settings.gerenteNombre || "Carmen Marquez",
+          cargoAutorizador: settings.gerenteCargo || "Gerente de Telemática (e)",
+          fichaAutorizador: settings.gerenteFicha || "15508",
         }));
       }
 
@@ -207,9 +267,11 @@ function MaterialPassForm() {
         }),
       }));
 
-      fetchUltimoNumero();
+      // Removed redundant fetchUltimoNumero() to preserve manual override
     }
   }, [editId]);
+
+  const [originalIds, setOriginalIds] = useState<any>({});
 
   const loadEditData = async (id: string) => {
     try {
@@ -219,6 +281,15 @@ function MaterialPassForm() {
       const d = new Date(pase.fecha_emision);
       const tzOffset = d.getTimezoneOffset() * 60000;
       const localISOTime = (new Date(d.getTime() - tzOffset)).toISOString().slice(0, -1);
+
+      setOriginalIds({
+        solicitadorId: pase.solicitador?.id,
+        conductorId: pase.conductor?.id,
+        despachadorId: pase.despachador?.id,
+        autorizadorId: pase.autorizador?.id,
+        destinoId: pase.destino?.id,
+        vehiculoId: pase.vehiculo?.id,
+      });
 
       setFormData((prev) => ({
         ...prev,
@@ -258,7 +329,7 @@ function MaterialPassForm() {
           unidad: ep.equipo?.unidad || "UND",
           producto: ep.equipo?.nombre || "",
           marca: ep.equipo?.marca || "",
-          tipoIdentificador: ep.equipo?.fmo ? "FMO" : "Serial",
+          tipoIdentificador: ep.equipo?.fmo ? "FMO" : (ep.equipo?.serial ? "Serial" : "S/N"),
           identificadores: ep.equipo?.fmo || ep.equipo?.serial || "",
         }));
         setItems(loadedItems);
@@ -300,97 +371,17 @@ function MaterialPassForm() {
         setLoadingVehiculos(false);
       }
     };
+
     fetchDestinos();
     fetchEmpleados();
     fetchVehiculos();
-    if (editId) {
-      loadEditData(editId);
-    } else {
-      const savedAjustes = localStorage.getItem("fmo_pases_settings");
-      if (savedAjustes) {
-        const settings = JSON.parse(savedAjustes);
-        setFormData(prev => ({
-          ...prev,
-          autorizadoPor: settings.gerenteNombre || prev.autorizadoPor,
-          cargoAutorizador: settings.gerenteCargo || prev.cargoAutorizador,
-          fichaAutorizador: settings.gerenteFicha || prev.fichaAutorizador,
-        }));
-      }
-      setFormData((prev) => ({
-        ...prev,
-        fecha: new Date().toISOString().split("T")[0],
-        hora: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
-      }));
-      fetchUltimoNumero();
-    }
-  }, [editId]);
-
-  const [items, setItems] = useState<MaterialItem[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [openDestino, setOpenDestino] = useState(false);
-  const [openDespachador, setOpenDespachador] = useState(false);
-  const [openSolicitante, setOpenSolicitante] = useState(false);
-  const [openConductor, setOpenConductor] = useState(false);
-  const [openVehiculoFMO, setOpenVehiculoFMO] = useState(false);
-  const [openVehiculoParticular, setOpenVehiculoParticular] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<"empleado" | "destino" | "vehiculo">("empleado");
-  const [modalRole, setModalRole] = useState<string>("");
-  const [isChangingVehicle, setIsChangingVehicle] = useState(false);
-
-  const openAddModal = (type: "empleado" | "destino" | "vehiculo", role: string = "") => {
-    setModalType(type);
-    setModalRole(role);
-    setIsModalOpen(true);
-  };
-
-  const handleEntityAdded = (data: any) => {
-    if (modalType === "empleado") {
-      setEmpleados((prev) => [...prev, data]);
-      if (modalRole === "Conductor") {
-        handleInputChange("conductor", data.nombre);
-        handleInputChange("fichaConductor", data.ficha);
-        if (data.vehiculo) {
-           setVehiculos(prev => [...prev, data.vehiculo]);
-           handleInputChange("vehiculoId", data.vehiculo.id);
-           handleInputChange("vehiculoParticular", data.vehiculo.placa);
-           if (data.vehiculo.esFMO) handleInputChange("vehiculoFMO", data.vehiculo.fmo);
-        }
-      } else if (modalRole === "Despachador") {
-        handleInputChange("despachadoPor", data.nombre);
-        handleInputChange("fichaDespachador", data.ficha);
-        handleInputChange("cargoDespachador", data.cargo);
-        handleInputChange("departamentoDespachador", data.departamento);
-      } else if (modalRole === "Solicitante") {
-        handleInputChange("solicitante", data.nombre);
-        handleInputChange("fichaSolicitante", data.ficha);
-        handleInputChange("cargoSolicitante", data.cargo);
-        handleInputChange("departamentoSolicitante", data.departamento);
-      }
-    } else if (modalType === "destino") {
-      setDestinos((prev) => [...prev, data]);
-      handleInputChange("embargueseA", data.nombre);
-      handleInputChange("direccion", data.direccion);
-      handleInputChange("telefono", data.telefono);
-    } else if (modalType === "vehiculo") {
-      setVehiculos((prev) => [...prev, data]);
-      handleInputChange("vehiculoId", data.id);
-      handleInputChange("vehiculoParticular", data.placa);
-      if (data.esFMO) handleInputChange("vehiculoFMO", data.fmo);
-      setIsChangingVehicle(false);
-    }
-  };
-
-  const handleInputChange = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const requiredFields = [
       { field: 'folio', name: 'N° Pase' },
-      { field: 'conceptoOpcion', name: 'Concepto del Pase' },
+      { field: 'conceptoOpcion', name: 'Tipo de Movimiento' },
       { field: 'tiempoEstimado', name: 'Tiempo Estimado' },
       { field: 'embargueseA', name: 'Embárguese a' },
       { field: 'direccion', name: 'Dirección' },
@@ -402,6 +393,16 @@ function MaterialPassForm() {
       { field: 'solicitante', name: 'Solicitante' },
     ];
     const missingFields = requiredFields.filter(rf => !formData[rf.field as keyof typeof formData]);
+    
+    // Check if any material item has missing mandatory fields (except brand)
+    const hasInvalidItems = items.some(item => 
+      !item.cantidad || !item.unidad || !item.producto || (item.tipoIdentificador !== "S/N" && !item.identificadores)
+    );
+
+    if (hasInvalidItems) {
+      missingFields.push({ field: 'items_fields', name: 'Detalles de Materiales (Cant., Unidad, Producto y Valores son obligatorios)' });
+    }
+
     if (!formData.vehiculoFMO && !formData.vehiculoParticular) {
       missingFields.push({ field: 'vehiculo', name: 'Vehículo (FMO o Particular)' });
     }
@@ -411,28 +412,32 @@ function MaterialPassForm() {
     if (missingFields.length > 0) {
       setValidationModal({
         isOpen: true,
-        title: "Campos Incompletos",
-        message: "Por favor, complete los siguientes campos obligatorios para continuar:",
+        title: "Campos Requeridos",
+        message: "Por favor complete los siguientes campos obligatorios:",
         fields: missingFields.map(f => f.name)
       });
       return;
     }
     setIsSubmitting(true);
-    const getEmpleadoId = (ficha: string) => {
-      const emp = empleados.find((e) => e.ficha === ficha);
-      return emp ? emp.id : null;
+    const getEmpleadoId = (ficha: string, role?: string, originalId?: number | null) => {
+      const emp = empleados.find((e) => 
+        e.ficha === ficha && 
+        (!role || e.rol?.toLowerCase() === role.toLowerCase())
+      );
+      if (emp) return emp.id;
+      return originalId || null;
     };
     const paseBody = {
       numeroPase: formData.folio,
       concepto: formData.conceptoOpcion,
-      destinoId: destinos.find((d) => d.nombre === formData.embargueseA)?.id || null,
+      destinoId: destinos.find((d) => d.nombre === formData.embargueseA)?.id || originalIds.destinoId || null,
       numero_compra: formData.ordenCompra,
       tipo_pago: formData.tipoPago,
-      solicitadorId: getEmpleadoId(formData.fichaSolicitante),
-      conductorId: getEmpleadoId(formData.fichaConductor),
-      despachadorId: getEmpleadoId(formData.fichaDespachador),
-      autorizadorId: getEmpleadoId(formData.fichaAutorizador),
-      vehiculoId: formData.vehiculoId,
+      solicitadorId: getEmpleadoId(formData.fichaSolicitante, "Solicitante", originalIds.solicitadorId),
+      conductorId: getEmpleadoId(formData.fichaConductor, "Conductor", originalIds.conductorId),
+      despachadorId: getEmpleadoId(formData.fichaDespachador, "Despachador", originalIds.despachadorId),
+      autorizadorId: getEmpleadoId(formData.fichaAutorizador, undefined, originalIds.autorizadorId),
+      vehiculoId: formData.vehiculoId || originalIds.vehiculoId,
       observaciones: "",
       tiempo_estimado: formData.tiempoEstimado,
       solicitud: formData.conceptoOpcion,
@@ -440,10 +445,14 @@ function MaterialPassForm() {
         const rawValues = item.identificadores ? item.identificadores.split(',').map(f => f.trim()).filter(f => f !== "") : [];
         const isFMO = item.tipoIdentificador === "FMO";
         const isSerial = item.tipoIdentificador === "Serial";
+        let cantidad = typeof item.cantidad === "string" ? parseInt(item.cantidad) : item.cantidad;
+        if (isNaN(cantidad)) cantidad = 1;
+        
         return {
+          id: !isNaN(Number(item.id)) ? Number(item.id) : undefined,
           marca: item.marca,
           descripcion: item.producto,
-          cantidad: typeof item.cantidad === "string" ? parseInt(item.cantidad) : item.cantidad,
+          cantidad: cantidad,
           unidad: item.unidad,
           fmos: isFMO ? rawValues : [],
           serial: isSerial ? rawValues.join(', ') : "",
@@ -457,12 +466,18 @@ function MaterialPassForm() {
       } else {
         await api.post("/pases", paseBody);
       }
-      const savedAjustes = localStorage.getItem("fmo_pases_settings");
-      if (savedAjustes) {
-        const settings = JSON.parse(savedAjustes);
-        if (settings.ultimoFolio === formData.folio) {
-          settings.ultimoFolio = "";
-          localStorage.setItem("fmo_pases_settings", JSON.stringify(settings));
+      if (!isEditing) {
+        // Clear session override
+        sessionStorage.removeItem("fmo_folio_override");
+
+        const savedAjustes = localStorage.getItem("fmo_pases_settings");
+        if (savedAjustes) {
+          const settings = JSON.parse(savedAjustes);
+          // Clear permanent override after use
+          if (settings.ultimoFolio) {
+            settings.ultimoFolio = "";
+            localStorage.setItem("fmo_pases_settings", JSON.stringify(settings));
+          }
         }
       }
       const pdfData = {
@@ -491,7 +506,7 @@ function MaterialPassForm() {
         cargo: formData.cargoDespachador,
         fichaDespachador: formData.fichaDespachador,
         despachadoPor: formData.despachadoPor,
-        dirigidoA: formData.observaciones,
+        dirigidoA: "", // Fixed: destination was duplicated here
         solicitud: formData.conceptoOpcion,
         conceptoNombre: formData.conceptoOpcion,
         autorizadoPor: formData.autorizadoPor,
@@ -557,7 +572,7 @@ function MaterialPassForm() {
       folio: prev.folio,
       fecha: new Date().toISOString().split("T")[0],
       hora: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
-      conceptoOpcion: "PRESTAMO",
+      conceptoOpcion: "",
       tiempoEstimado: "",
       embargueseA: "",
       ordenCompra: "",
@@ -574,7 +589,6 @@ function MaterialPassForm() {
       departamentoDespachador: "",
       ...auth,
       vehiculoId: null,
-      observaciones: "",
       solicitud: "",
       solicitante: "",
       fichaSolicitante: "",
@@ -583,6 +597,7 @@ function MaterialPassForm() {
     }));
     fetchUltimoNumero();
     setItems([]);
+    setOriginalIds({});
     setIsSubmitted(false);
     setIsChangingVehicle(false);
   };
@@ -707,6 +722,12 @@ function MaterialPassForm() {
                       <Command>
                         <CommandInput placeholder="Filtrar destinos..." className="h-12" />
                         <CommandList className="max-h-[300px]">
+                          <CommandGroup>
+                            <CommandItem onSelect={() => { openAddModal("destino"); setOpenDestino(false); }} className="text-primary font-black py-3">
+                              <Plus className="mr-2 h-5 w-5" /> AGREGAR NUEVO DESTINO
+                            </CommandItem>
+                          </CommandGroup>
+                          <CommandSeparator />
                           <CommandEmpty className="p-4 text-center">
                             <p className="text-sm mb-3">No se encontró el destino.</p>
                             <Button size="sm" variant="secondary" className="w-full" onClick={() => {
@@ -734,22 +755,12 @@ function MaterialPassForm() {
                               </CommandItem>
                             ))}
                           </CommandGroup>
-                          <CommandSeparator />
-                          <CommandGroup>
-                            <CommandItem onSelect={() => { openAddModal("destino"); setOpenDestino(false); }} className="text-primary font-black py-3">
-                              <Plus className="mr-2 h-5 w-5" /> AGREGAR NUEVO DESTINO
-                            </CommandItem>
-                          </CommandGroup>
                         </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
                   <Input className={cn("h-11", readOnlyStyles)} value={formData.embargueseA} readOnly tabIndex={-1} />
                 </div>
-              </div>
-              <div className="space-y-3">
-                <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">N° ORDEN DE COMPRA</Label>
-                <Input className={cn("h-12 text-lg", inputStyles)} value={formData.ordenCompra} onChange={(e) => handleInputChange("ordenCompra", e.target.value)} />
               </div>
               <div className="space-y-3">
                 <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">TELÉFONO</Label>
@@ -759,21 +770,38 @@ function MaterialPassForm() {
                 <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">DIRECCIÓN</Label>
                 <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.direccion} readOnly tabIndex={-1} />
               </div>
-              <div className="md:col-span-2 pt-2">
-                <Label className="block mb-4 text-base font-black text-foreground font-black uppercase tracking-tight">CONDICIÓN DE PAGO</Label>
-                <RadioGroup value={formData.tipoPago} onValueChange={(val) => handleInputChange("tipoPago", val)} className="flex gap-10">
-                  <label className="flex items-center space-x-3 cursor-pointer group" htmlFor="contado">
-                    <RadioGroupItem value="CONTADO" id="contado" className="border-border w-6 h-6 border-2" />
-                    <span className="text-xl font-black group-hover:text-primary transition-colors">Contado</span>
-                  </label>
-                  <label className="flex items-center space-x-3 cursor-pointer group" htmlFor="credito">
-                    <RadioGroupItem value="CREDITO" id="credito" className="border-border w-6 h-6 border-2" />
-                    <span className="text-xl font-black group-hover:text-primary transition-colors">Crédito</span>
-                  </label>
-                </RadioGroup>
-              </div>
             </CardContent>
           </Card>
+
+          {formData.conceptoOpcion === "VENDIDO" && (
+            <Card className="shadow-sm border-border/50 bg-card/50 backdrop-blur-sm animate-in fade-in slide-in-from-top-4 duration-300">
+              <CardHeader className="pb-3 border-b bg-muted/20">
+                <CardTitle className="text-2xl font-black flex items-center gap-2 text-foreground">
+                  <CreditCard className="h-7 w-7 text-primary" />
+                  DATOS DE PAGO
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">N° ORDEN DE COMPRA</Label>
+                  <Input className={cn("h-12 text-lg", inputStyles)} value={formData.ordenCompra} onChange={(e) => handleInputChange("ordenCompra", e.target.value)} />
+                </div>
+                <div className="space-y-3 pt-1">
+                  <Label className="block mb-4 text-base font-black text-foreground font-black uppercase tracking-tight">MÉTODO DE PAGO</Label>
+                  <RadioGroup value={formData.tipoPago} onValueChange={(val) => handleInputChange("tipoPago", val)} className="flex gap-10">
+                    <label className="flex items-center space-x-3 cursor-pointer group" htmlFor="contado">
+                      <RadioGroupItem value="CONTADO" id="contado" className="border-border w-6 h-6 border-2" />
+                      <span className="text-xl font-black group-hover:text-primary transition-colors">Contado</span>
+                    </label>
+                    <label className="flex items-center space-x-3 cursor-pointer group" htmlFor="credito">
+                      <RadioGroupItem value="CREDITO" id="credito" className="border-border w-6 h-6 border-2" />
+                      <span className="text-xl font-black group-hover:text-primary transition-colors">Crédito</span>
+                    </label>
+                  </RadioGroup>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="shadow-sm border-border/50 bg-card/50 backdrop-blur-sm">
             <CardHeader className="pb-3 border-b bg-muted/20">
@@ -805,6 +833,12 @@ function MaterialPassForm() {
                       <Command>
                         <CommandInput placeholder="Buscar conductor..." className="h-12" />
                         <CommandList>
+                          <CommandGroup>
+                            <CommandItem onSelect={() => { openAddModal("empleado", "Conductor"); setOpenConductor(false); }} className="text-primary font-black py-3">
+                              <Plus className="mr-2 h-5 w-5" /> AGREGAR NUEVO CONDUCTOR
+                            </CommandItem>
+                          </CommandGroup>
+                          <CommandSeparator />
                           <CommandEmpty className="p-4 text-center">No se encontró el conductor.</CommandEmpty>
                           <CommandGroup heading="Conductores">
                             {empleados.filter((e) => e.rol?.toLowerCase() === "conductor").map((emp) => (
@@ -825,121 +859,125 @@ function MaterialPassForm() {
                                   }
                                 } else {
                                   handleInputChange("vehiculoId", null);
-                                  handleInputChange("vehiculoParticular", "");
-                                  handleInputChange("vehiculoFMO", "");
-                                  setIsChangingVehicle(true);
-                                }
-                                if (assignedVehicle) {
-                                  setIsChangingVehicle(false);
                                 }
                                 setOpenConductor(false);
                               }} className="py-3">
-                                <Check className={cn("mr-2 h-4 w-4", formData.conductor === emp.nombre ? "opacity-100" : "opacity-0")} />
-                                <div><div className="font-bold">{emp.nombre}</div><div className="text-xs text-muted-foreground">Ficha: {emp.ficha}</div></div>
+                                <Check className={cn("mr-2 h-4 w-4", formData.fichaConductor === emp.ficha ? "opacity-100" : "opacity-0")} />
+                                <div className="flex flex-col">
+                                  <span className="font-bold">{emp.nombre}</span>
+                                  <span className="text-xs text-muted-foreground">Ficha: {emp.ficha}</span>
+                                </div>
                               </CommandItem>
                             ))}
-                          </CommandGroup>
-                          <CommandSeparator />
-                          <CommandGroup>
-                            <CommandItem onSelect={() => { openAddModal("empleado", "Conductor"); setOpenConductor(false); }} className="text-primary font-black py-3">
-                              <Plus className="mr-2 h-5 w-5" /> AGREGAR NUEVO CONDUCTOR
-                            </CommandItem>
                           </CommandGroup>
                         </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
-                  <Input className={cn("h-11", readOnlyStyles)} value={formData.conductor} readOnly tabIndex={-1} />
-                </div>
-
-                <div className="space-y-3">
-                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">VEHÍCULO (MARCA / MODELO / PLACA)</Label>
-                  <Popover open={openVehiculoParticular} onOpenChange={setOpenVehiculoParticular}>
-                    <PopoverTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        role="combobox" 
-                        className={cn("w-full h-12 justify-between text-lg", inputStyles)}
-                        onKeyDown={(e) => { if (e.key === "Enter") setOpenVehiculoParticular(true); }}
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <Truck className="h-5 w-5 text-primary/70" />
-                          {formData.vehiculoParticular || "Elegir vehículo..."}
-                        </div>
-                        <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Buscar vehículo..." className="h-12" />
-                        <CommandList>
-                          <CommandEmpty className="p-4 text-center">No registrado.</CommandEmpty>
-                          <CommandGroup heading="Vehículos">
-                            {vehiculos.map((v) => (
-                              <CommandItem key={v.id} value={v.placa || v.fmo} onSelect={() => {
-                                handleInputChange("vehiculoId", v.id);
-                                if (v.esFMO) {
-                                  handleInputChange("vehiculoParticular", v.placa || "");
-                                  handleInputChange("vehiculoFMO", v.fmo);
-                                } else {
-                                  handleInputChange("vehiculoParticular", v.placa);
-                                  handleInputChange("vehiculoFMO", "");
-                                }
-                                setOpenVehiculoParticular(false);
-                              }} className="py-3">
-                                <Check className={cn("mr-2 h-4 w-4", formData.vehiculoParticular === v.placa ? "opacity-100" : "opacity-0")} />
-                                <div><div className="font-bold">{v.placa}</div><div className="text-xs text-muted-foreground">{v.esFMO ? `FMO: ${v.fmo}` : "Particular"}</div></div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                          <CommandGroup>
-                            <CommandItem onSelect={() => { openAddModal("vehiculo"); setOpenVehiculoParticular(false); }} className="text-primary font-black py-3">
-                              <Plus className="mr-2 h-5 w-5" /> AGREGAR NUEVO VEHÍCULO
-                            </CommandItem>
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-
-                  {(!formData.vehiculoParticular || isChangingVehicle) ? (
-                    <Input className={cn("h-12 text-lg", inputStyles)} placeholder="Marca, Modelo o Placa..." value={formData.vehiculoParticular} onChange={(e) => handleInputChange("vehiculoParticular", e.target.value)} />
-                  ) : (
-                    <div className="flex gap-2">
-                       <Input className={cn("h-12 text-lg flex-1", readOnlyStyles)} value={formData.vehiculoParticular} readOnly tabIndex={-1} />
-                       <Button type="button" variant="outline" size="sm" className="h-12 px-3 border-primary text-primary font-bold hover:bg-primary/5" onClick={() => setIsChangingVehicle(true)}>
-                          Cambiar
-                       </Button>
-                    </div>
-                  )}
+                  <Input className={cn("h-11", readOnlyStyles)} value={formData.fichaConductor} readOnly placeholder="Ficha / C.I." tabIndex={-1} />
                 </div>
               </div>
 
               <div className="space-y-6">
                 <div className="space-y-3">
-                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">FICHA O CÉDULA</Label>
-                  <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.fichaConductor} readOnly tabIndex={-1} />
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">VEHÍCULO F.M.O.</Label>
-                  <Input className={cn("h-12 text-lg", readOnlyStyles)} placeholder="Se llena automáticamente..." value={formData.vehiculoFMO} readOnly tabIndex={-1} />
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">IDENTIFICACIÓN DEL VEHÍCULO</Label>
+                    {!isChangingVehicle && (formData.vehiculoFMO || formData.vehiculoParticular) && (
+                      <Button variant="ghost" size="sm" onClick={() => setIsChangingVehicle(true)} className="h-6 text-xs text-primary font-black">
+                        CAMBIAR
+                      </Button>
+                    )}
+                  </div>
+
+                  {(isChangingVehicle || (!formData.vehiculoFMO && !formData.vehiculoParticular)) ? (
+                    <Popover open={openVehiculo} onOpenChange={setOpenVehiculo}>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          role="combobox" 
+                          className={cn("w-full h-12 justify-between text-lg", inputStyles)}
+                          onKeyDown={(e) => { if (e.key === "Enter") setOpenVehiculo(true); }}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <Truck className="h-5 w-5 text-primary/70" />
+                            Seleccionar vehículo...
+                          </div>
+                          <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Buscar por placa o FMO..." className="h-12" />
+                          <CommandList>
+                            <CommandGroup>
+                              <CommandItem onSelect={() => { openAddModal("vehiculo"); setOpenVehiculo(false); }} className="text-primary font-black py-3">
+                                <Plus className="mr-2 h-5 w-5" /> AGREGAR NUEVO VEHÍCULO
+                              </CommandItem>
+                            </CommandGroup>
+                            <CommandSeparator />
+                            <CommandEmpty className="p-4 text-center">No se encontró el vehículo.</CommandEmpty>
+                            <CommandGroup heading="Vehículos de la Empresa (FMO)">
+                              {vehiculos.filter(v => v.esFMO).map((veh) => (
+                                <CommandItem key={veh.id} value={`${veh.fmo} ${veh.placa}`} onSelect={() => {
+                                  handleInputChange("vehiculoId", veh.id);
+                                  handleInputChange("vehiculoFMO", veh.fmo);
+                                  handleInputChange("vehiculoParticular", veh.placa || "");
+                                  setOpenVehiculo(false);
+                                  setIsChangingVehicle(false);
+                                }} className="py-3">
+                                  <div className="flex flex-col">
+                                    <span className="font-bold">FMO: {veh.fmo}</span>
+                                    <span className="text-xs text-muted-foreground">Placa: {veh.placa || "N/A"}</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                            <CommandSeparator />
+                            <CommandGroup heading="Vehículos Particulares">
+                              {vehiculos.filter(v => !v.esFMO).map((veh) => (
+                                <CommandItem key={veh.id} value={veh.placa} onSelect={() => {
+                                  handleInputChange("vehiculoId", veh.id);
+                                  handleInputChange("vehiculoFMO", "");
+                                  handleInputChange("vehiculoParticular", veh.placa);
+                                  setOpenVehiculo(false);
+                                  setIsChangingVehicle(false);
+                                }} className="py-3">
+                                  <span className="font-bold">Placa: {veh.placa}</span>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">VEHÍCULO F.M.O.</span>
+                        <Input className={cn("h-11", readOnlyStyles)} value={formData.vehiculoFMO || "N/A"} readOnly tabIndex={-1} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">PLACA / PARTICULAR</span>
+                        <Input className={cn("h-11", readOnlyStyles)} value={formData.vehiculoParticular || "N/A"} readOnly tabIndex={-1} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Dispatch Info */}
           <Card className="shadow-sm border-border/50 bg-card/50 backdrop-blur-sm">
             <CardHeader className="pb-3 border-b bg-muted/20">
-              <CardTitle className="text-2xl font-black flex items-center gap-2 text-foreground">
-                <User className="h-7 w-7 text-primary" />
-                MATERIAL DESPACHADO POR
+              <CardTitle className="text-2xl font-black flex items-center gap-2 text-foreground uppercase">
+                <UserCheck className="h-7 w-7 text-primary" />
+                DESPACHO
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-3">
-                <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">NOMBRE</Label>
-                <div className="flex flex-col gap-2">
+            <CardContent className="pt-6">
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">MATERIAL DESPACHADO POR</Label>
                   <Popover open={openDespachador} onOpenChange={setOpenDespachador}>
                     <PopoverTrigger asChild>
                       <Button 
@@ -949,73 +987,72 @@ function MaterialPassForm() {
                         onKeyDown={(e) => { if (e.key === "Enter") setOpenDespachador(true); }}
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <Search className="h-5 w-5 text-primary/70" />
-                          {formData.despachadoPor || "Seleccionar..."}
+                          <User className="h-5 w-5 text-primary/70" />
+                          {formData.despachadoPor || "Seleccionar despachador..."}
                         </div>
                         <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[400px] p-0" align="start">
                       <Command>
-                        <CommandInput placeholder="Buscar por nombre o ficha..." className="h-12" />
+                        <CommandInput placeholder="Buscar despachador..." className="h-12" />
                         <CommandList>
-                          <CommandEmpty className="p-4 text-center">No se encontró.</CommandEmpty>
-                          <CommandGroup heading="Personal de Despacho">
-                            {empleados.filter(e => e.rol?.toLowerCase() === "despachador").map((emp) => (
-                              <CommandItem key={emp.id} value={`${emp.nombre} ${emp.ficha}`} onSelect={() => {
-                                handleInputChange("despachadoPor", emp.nombre);
-                                handleInputChange("fichaDespachador", emp.ficha);
-                                handleInputChange("cargoDespachador", emp.cargo);
-                                handleInputChange("departamentoDespachador", emp.departamento);
-                                setOpenDespachador(false);
-                              }} className="py-3">
-                                <Check className={cn("mr-2 h-4 w-4", formData.despachadoPor === emp.nombre ? "opacity-100" : "opacity-0")} />
-                                <div><div className="font-bold">{emp.nombre}</div><div className="text-xs text-muted-foreground">Ficha: {emp.ficha} | {emp.cargo}</div></div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                          <CommandSeparator />
                           <CommandGroup>
                             <CommandItem onSelect={() => { openAddModal("empleado", "Despachador"); setOpenDespachador(false); }} className="text-primary font-black py-3">
-                              <Plus className="mr-2 h-5 w-5" /> AGREGAR PERSONAL
+                              <Plus className="mr-2 h-5 w-5" /> AGREGAR NUEVO DESPACHADOR
                             </CommandItem>
+                          </CommandGroup>
+                          <CommandSeparator />
+                          <CommandEmpty className="p-4 text-center">No se encontró el empleado.</CommandEmpty>
+                          <CommandGroup heading="Despachadores">
+                            {empleados
+                              .filter((e) => e.rol?.toLowerCase() === "despachador")
+                              .map((emp) => (
+                                <CommandItem key={emp.id} value={`${emp.nombre} ${emp.ficha}`} onSelect={() => {
+                                  handleInputChange("despachadoPor", emp.nombre);
+                                  handleInputChange("fichaDespachador", emp.ficha);
+                                  handleInputChange("cargoDespachador", emp.cargo || "");
+                                  handleInputChange("departamentoDespachador", emp.departamento || "");
+                                  setOpenDespachador(false);
+                                }} className="py-3">
+                                  <Check className={cn("mr-2 h-4 w-4", formData.fichaDespachador === emp.ficha ? "opacity-100" : "opacity-0")} />
+                                  <div className="flex flex-col">
+                                    <span className="font-bold">{emp.nombre}</span>
+                                    <span className="text-xs text-muted-foreground">Ficha: {emp.ficha} • {emp.cargo}</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
                           </CommandGroup>
                         </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
-                  <Input className={cn("h-11", readOnlyStyles)} value={formData.despachadoPor} readOnly tabIndex={-1} />
                 </div>
-              </div>
-              <div className="grid grid-cols-1 gap-6">
-                <div className="space-y-3">
-                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">FICHA</Label>
-                  <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.fichaDespachador} readOnly tabIndex={-1} />
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">CARGO</Label>
-                  <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.cargoDespachador} readOnly tabIndex={-1} />
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">DEPARTAMENTO</Label>
-                  <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.departamentoDespachador} readOnly tabIndex={-1} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">FICHA</span>
+                    <Input className={cn("h-11", readOnlyStyles)} value={formData.fichaDespachador} readOnly tabIndex={-1} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">CARGO</span>
+                    <Input className={cn("h-11", readOnlyStyles)} value={formData.cargoDespachador} readOnly tabIndex={-1} />
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Applicant Info */}
           <Card className="shadow-sm border-border/50 bg-card/50 backdrop-blur-sm">
             <CardHeader className="pb-3 border-b bg-muted/20">
-              <CardTitle className="text-2xl font-black flex items-center gap-2 text-foreground">
+              <CardTitle className="text-2xl font-black flex items-center gap-2 text-foreground uppercase">
                 <UserCheck className="h-7 w-7 text-primary" />
-                DATOS DEL SOLICITANTE
+                AUTORIZACIÓN / SOLICITANTE
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-3">
-                <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">NOMBRE DEL SOLICITANTE</Label>
-                <div className="flex flex-col gap-2">
+            <CardContent className="pt-6">
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">SOLICITANTE</Label>
                   <Popover open={openSolicitante} onOpenChange={setOpenSolicitante}>
                     <PopoverTrigger asChild>
                       <Button 
@@ -1025,93 +1062,66 @@ function MaterialPassForm() {
                         onKeyDown={(e) => { if (e.key === "Enter") setOpenSolicitante(true); }}
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <UserCheck className="h-5 w-5 text-primary/70" />
-                          {formData.solicitante || "Seleccionar..."}
+                          <User className="h-5 w-5 text-primary/70" />
+                          {formData.solicitante || "Seleccionar solicitante..."}
                         </div>
                         <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[400px] p-0" align="start">
                       <Command>
-                        <CommandInput placeholder="Buscar por nombre o ficha..." className="h-12" />
+                        <CommandInput placeholder="Buscar solicitante..." className="h-12" />
                         <CommandList>
-                          <CommandEmpty className="p-4 text-center">No se encontró.</CommandEmpty>
-                          <CommandGroup heading="Solicitantes">
-                            {empleados.filter(e => e.rol?.toLowerCase() === "solicitante").map((emp) => (
-                              <CommandItem key={emp.id} value={`${emp.nombre} ${emp.ficha}`} onSelect={() => {
-                                handleInputChange("solicitante", emp.nombre);
-                                handleInputChange("fichaSolicitante", emp.ficha);
-                                handleInputChange("cargoSolicitante", emp.cargo);
-                                handleInputChange("departamentoSolicitante", emp.departamento);
-                                setOpenSolicitante(false);
-                              }} className="py-3">
-                                <Check className={cn("mr-2 h-4 w-4", formData.solicitante === emp.nombre ? "opacity-100" : "opacity-0")} />
-                                <div><div className="font-bold">{emp.nombre}</div><div className="text-xs text-muted-foreground">F- {emp.ficha} | {emp.cargo}</div></div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                          <CommandSeparator />
                           <CommandGroup>
                             <CommandItem onSelect={() => { openAddModal("empleado", "Solicitante"); setOpenSolicitante(false); }} className="text-primary font-black py-3">
-                              <Plus className="mr-2 h-5 w-5" /> AGREGAR SOLICITANTE
+                              <Plus className="mr-2 h-5 w-5" /> AGREGAR NUEVO SOLICITANTE
                             </CommandItem>
+                          </CommandGroup>
+                          <CommandSeparator />
+                          <CommandEmpty className="p-4 text-center">No se encontró el empleado.</CommandEmpty>
+                          <CommandGroup heading="Solicitantes">
+                            {empleados
+                              .filter((e) => e.rol?.toLowerCase() === "solicitante")
+                              .map((emp) => (
+                                <CommandItem key={emp.id} value={`${emp.nombre} ${emp.ficha}`} onSelect={() => {
+                                  handleInputChange("solicitante", emp.nombre);
+                                  handleInputChange("fichaSolicitante", emp.ficha);
+                                  handleInputChange("cargoSolicitante", emp.cargo || "");
+                                  handleInputChange("departamentoSolicitante", emp.departamento || "");
+                                  setOpenSolicitante(false);
+                                }} className="py-3">
+                                  <Check className={cn("mr-2 h-4 w-4", formData.fichaSolicitante === emp.ficha ? "opacity-100" : "opacity-0")} />
+                                  <div className="flex flex-col">
+                                    <span className="font-bold">{emp.nombre}</span>
+                                    <span className="text-xs text-muted-foreground">Ficha: {emp.ficha} • {emp.cargo}</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
                           </CommandGroup>
                         </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
-                  <Input className={cn("h-11", readOnlyStyles)} value={formData.solicitante} readOnly tabIndex={-1} />
                 </div>
-              </div>
-              <div className="grid grid-cols-1 gap-6">
-                <div className="space-y-3">
-                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">FICHA</Label>
-                  <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.fichaSolicitante} readOnly tabIndex={-1} />
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">CARGO</Label>
-                  <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.cargoSolicitante} readOnly tabIndex={-1} />
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">DEPARTAMENTO</Label>
-                  <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.departamentoSolicitante} readOnly tabIndex={-1} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">FICHA</span>
+                    <Input className={cn("h-11", readOnlyStyles)} value={formData.fichaSolicitante} readOnly tabIndex={-1} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">CARGO</span>
+                    <Input className={cn("h-11", readOnlyStyles)} value={formData.cargoSolicitante} readOnly tabIndex={-1} />
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Authorization - Static/Configured */}
-          <Card className="bg-muted/10 border-border/50">
-            <CardHeader className="pb-3 border-b border-border/50 bg-muted/20">
-              <CardTitle className="text-2xl font-black flex items-center gap-2 text-foreground uppercase">
-                <ShieldCheck className="h-7 w-7 text-primary" />
-                AUTORIZACIÓN
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="space-y-2">
-                <Label className="text-sm font-black text-foreground font-black uppercase tracking-tight">AUTORIZADO POR</Label>
-                <Input className={cn("h-11 text-lg font-black uppercase border-border/60 shadow-sm", readOnlyStyles)} value={formData.autorizadoPor} readOnly tabIndex={-1} />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-black text-foreground font-black uppercase tracking-tight">CARGO</Label>
-                <Input className={cn("h-11 text-base font-black uppercase border-border/60 shadow-sm", readOnlyStyles)} value={formData.cargoAutorizador} readOnly tabIndex={-1} />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-black text-foreground font-black uppercase tracking-tight">FICHA</Label>
-                <Input className={cn("h-11 text-lg font-black uppercase border-border/60 shadow-sm", readOnlyStyles)} value={formData.fichaAutorizador} readOnly tabIndex={-1} />
-              </div>
-            </CardContent>
-          </Card>
-
-
-
-          {/* Materials Table */}
           <Card className="shadow-sm border-border/50 bg-card/50 backdrop-blur-sm">
             <CardHeader className="pb-3 border-b bg-muted/20">
-              <CardTitle className="text-2xl font-black flex items-center gap-2 text-foreground uppercase">
-                <FileText className="h-7 w-7 text-primary" />
-                DETALLE DE MATERIALES
+              <CardTitle className="text-2xl font-black flex items-center gap-2 text-foreground">
+                <Monitor className="h-7 w-7 text-primary" />
+                MATERIALES / EQUIPOS
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
@@ -1119,16 +1129,22 @@ function MaterialPassForm() {
             </CardContent>
           </Card>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-end pb-10">
-            <Button type="button" onClick={handleReset} className="h-14 px-8 font-black text-xl shadow-lg hover:shadow-xl transition-all">
-              <RotateCcw className="h-5 w-5 mr-3" /> LIMPIAR FORMULARIO
+          <div className="flex gap-4 pt-4">
+            <Button type="button" variant="outline" size="lg" className="flex-1 h-16 text-xl font-black border-2 border-border/50 hover:bg-muted/50" onClick={handleReset} disabled={isSubmitting}>
+              <RotateCcw className="h-6 w-6 mr-3" />
+              LIMPIAR FORMULARIO
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="h-14 px-12 font-black text-xl shadow-lg hover:shadow-xl transition-all">
+            <Button type="submit" size="lg" className="flex-[2] h-16 text-xl font-black shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform active:scale-100" disabled={isSubmitting}>
               {isSubmitting ? (
-                <><span className="h-5 w-5 mr-3 animate-spin rounded-full border-3 border-current border-t-transparent" /> PROCESANDO...</>
+                <div className="flex items-center gap-3">
+                  <div className="animate-spin h-6 w-6 border-4 border-white border-t-transparent rounded-full" />
+                  PROCESANDO...
+                </div>
               ) : (
-                <><Send className="h-5 w-5 mr-3" /> REGISTRAR PASE</>
+                <div className="flex items-center gap-3">
+                  <Send className="h-6 w-6 mr-1" />
+                  {isEditing ? "GUARDAR CAMBIOS" : "REGISTRAR Y GENERAR PDF"}
+                </div>
               )}
             </Button>
           </div>
@@ -1136,23 +1152,35 @@ function MaterialPassForm() {
       </main>
 
       <AddEntityModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        type={modalType}
-        role={modalRole}
-        onSuccess={handleEntityAdded}
-        vehiculosDisponibles={vehiculos}
+        isOpen={modalType !== null}
+        onClose={() => setModalType(null)}
+        type={modalType || "empleado"}
+        role={modalRole || undefined}
+        onSuccess={async () => {
+          if (modalType === "destino") {
+            const data = await api.get<Destino[]>("/destinos");
+            setDestinos(data);
+          } else if (modalType === "empleado") {
+            const data = await api.get<any[]>("/empleados");
+            setEmpleados(data);
+          } else if (modalType === "vehiculo") {
+            const data = await api.get<any[]>("/vehiculos");
+            setVehiculos(data);
+          }
+          setModalType(null);
+        }}
       />
 
-      {/* Custom Validation Modal */}
       <Dialog open={validationModal.isOpen} onOpenChange={(open) => setValidationModal(prev => ({ ...prev, isOpen: open }))}>
-        <DialogContent className="sm:max-w-lg border-t-8 border-t-destructive">
+        <DialogContent className="max-w-md border-destructive/20 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-destructive font-black text-2xl uppercase">
-              <AlertTriangle className="h-8 w-8" />
+            <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <AlertTriangle className="h-8 w-8 text-destructive" />
+            </div>
+            <DialogTitle className="text-2xl font-black text-center text-foreground">
               {validationModal.title}
             </DialogTitle>
-            <DialogDescription className="text-lg text-foreground font-black uppercase tracking-tight pt-4 font-bold">
+            <DialogDescription className="text-center text-base font-medium pt-2">
               {validationModal.message}
             </DialogDescription>
           </DialogHeader>
@@ -1178,6 +1206,14 @@ function MaterialPassForm() {
     </div>
   );
 }
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function MaterialPassPage() {
   return (

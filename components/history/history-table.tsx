@@ -13,7 +13,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Search, Filter, Calendar as CalendarIcon, FileText, User, MapPin, Check, ChevronsUpDown, X, Pencil } from "lucide-react";
+import { Search, Filter, Calendar as CalendarIcon, Eye, User, MapPin, Check, ChevronsUpDown, X, Pencil } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -549,7 +549,7 @@ export function HistoryTable() {
                                                     onClick={() => handleDownloadPDF(item.id)}
                                                     title="Descargar PDF"
                                                 >
-                                                    <FileText className="h-4 w-4" />
+                                                    <Eye className="h-4 w-4" />
                                                     <span className="sr-only">Descargar PDF</span>
                                                 </Button>
                                             </div>
