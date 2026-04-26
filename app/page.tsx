@@ -150,7 +150,7 @@ function MaterialPassForm() {
         if (settings.ultimoFolio) {
           startFolio = settings.ultimoFolio;
           // Move from localStorage to sessionStorage so it persists for this session
-          sessionStorage.setItem("fmo_folio_override", startFolio);
+          sessionStorage.setItem("fmo_folio_override", startFolio as string);
           // Clear from localStorage so it's not reused after a hard refresh/re-entry
           settings.ultimoFolio = "";
           localStorage.setItem("fmo_pases_settings", JSON.stringify(settings));
