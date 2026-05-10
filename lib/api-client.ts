@@ -1,8 +1,5 @@
-// Definimos la prioridad de las URLs
-const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_URL_REMOTE ||
-    process.env.NEXT_PUBLIC_API_URL_LOCAL ||
-    "http://localhost:3001";
+// Usamos una ruta relativa para que funcione con cualquier IP a través de Nginx
+const API_BASE_URL = "/api";
 
 interface RequestOptions extends RequestInit {
     params?: Record<string, string>;
@@ -12,7 +9,8 @@ export async function apiRequest<T>(
     endpoint: string,
     { params, ...options }: RequestOptions = {}
 ): Promise<T> {
-    const url = new URL(`${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`);
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    const url = new URL(`${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`, baseUrl);
 
     if (params) {
         Object.entries(params).forEach(([key, value]) => {

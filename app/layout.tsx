@@ -24,7 +24,9 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname()
   const router = useRouter()
-  const isAuthPage = pathname === "/login" || pathname === "/register"
+  
+  // Handle trailing slashes for auth pages
+  const isAuthPage = pathname === "/login" || pathname === "/login/" || pathname === "/register" || pathname === "/register/"
 
   const [isMounted, setIsMounted] = React.useState(false)
   const [isLoading, setIsLoading] = React.useState(true)
@@ -48,18 +50,18 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`font-sans antialiased text-foreground bg-background ${outfit.variable}`} suppressHydrationWarning>
-        {(!isMounted || (isLoading && !isAuthPage)) ? (
-          <div className="flex items-center justify-center min-h-screen">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-          </div>
-        ) : (
-          <>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="dark"
-              enableSystem
-              disableTransitionOnChange
-            >
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {(!isMounted || (isLoading && !isAuthPage)) ? (
+            <div className="flex items-center justify-center min-h-screen bg-background">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <>
               {isAuthPage ? (
                 <main>{children}</main>
               ) : (
@@ -70,12 +72,13 @@ export default function RootLayout({
                   </SidebarInset>
                 </SidebarProvider>
               )}
-            </ThemeProvider>
-            <Toaster position="top-right" richColors theme="dark" />
-            <Analytics />
-          </>
-        )}
+              <Toaster position="top-right" richColors theme="dark" />
+              <Analytics />
+            </>
+          )}
+        </ThemeProvider>
       </body>
     </html>
   )
 }
+

@@ -1,13 +1,11 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, globalShortcut } = require('electron');
 const path = require('path');
+const serve = require('electron-serve');
 
-// 1. Iniciar el servidor Express
-// Al requerir el archivo, el servidor comienza a escuchar en el puerto 3000
-const { PORT, HOST } = require('./server');
+// Configuración de electron-serve para cargar la carpeta 'out'
+const loadURL = (typeof serve === 'function' ? serve : serve.default)({ directory: 'out' });
 
 // 2. Configuración de Hot Reload
-// Esto recarga la ventana si cambias un HTML/EJS, 
-// y reinicia la app si cambias el código de Electron/Node (main.js o server.js)
 if (!app.isPackaged) {
     try {
         require('electron-reload')(__dirname, {
@@ -17,33 +15,39 @@ if (!app.isPackaged) {
     } catch (_) { }
 }
 
+// Descomentado para evitar problemas de pantalla negra en algunos sistemas Linux
+app.disableHardwareAcceleration();
 
 function createWindow() {
-    // Crear la ventana del navegador
     const mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
         backgroundColor: '#0A0A0A',
         webPreferences: {
             nodeIntegration: false,
-            contextIsolation: true
+            contextIsolation: true,
         }
     });
 
-    // En desarrollo, esperar un poco para que Next.js compile si es necesario
-    const loadURL = () => {
-        mainWindow.loadURL(`http://${HOST}:${PORT}`).catch(() => {
-            setTimeout(loadURL, 1000); // Reintento si el servidor no está listo
-        });
-    }
-
-    loadURL();
-
     if (app.isPackaged) {
+        // En producción, carga usando electron-serve
+        loadURL(mainWindow).catch(err => {
+            console.error("Error al cargar la aplicación:", err);
+        });
         mainWindow.setMenu(null);
+        
+        // Atajo para abrir DevTools en producción si es necesario (Ctrl+Shift+I)
+        globalShortcut.register('CommandOrControl+Shift+I', () => {
+            mainWindow.webContents.openDevTools();
+        });
+    } else {
+        // En desarrollo, carga desde el servidor de Next.js
+        mainWindow.loadURL('http://localhost:3000');
+        // Abre las herramientas de desarrollo en modo desarrollo para depurar
+        mainWindow.webContents.openDevTools();
     }
 }
-//app.disableHardwareAcceleration();
+
 // Inicialización de Electron
 app.whenReady().then(() => {
     createWindow();
