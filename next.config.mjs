@@ -22,7 +22,7 @@ const nextConfig = {
         {
           source: '/api/:path*',
           // Puedes cambiar esta URL mediante una variable de entorno si tu backend está en otra IP
-          destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001'}/:path*`, 
+          destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://192.168.1.7:3001'}/:path*`, 
         },
       ];
     },

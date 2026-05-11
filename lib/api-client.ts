@@ -1,5 +1,5 @@
-// Usamos una ruta relativa para que funcione con cualquier IP a través de Nginx
-const API_BASE_URL = "/api";
+// Usamos la IP directa del backend para que funcione sin Nginx (necesario para .exe/.deb)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://192.168.1.7:3001";
 
 interface RequestOptions extends RequestInit {
     params?: Record<string, string>;
@@ -9,8 +9,17 @@ export async function apiRequest<T>(
     endpoint: string,
     { params, ...options }: RequestOptions = {}
 ): Promise<T> {
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-    const url = new URL(`${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`, baseUrl);
+    const fullEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    
+    // Si API_BASE_URL es una URL absoluta, la usamos directamente.
+    // Si es una ruta relativa (como "/api"), la combinamos con el origen actual.
+    let url: URL;
+    if (API_BASE_URL.startsWith('http')) {
+        url = new URL(`${API_BASE_URL}${fullEndpoint}`);
+    } else {
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+        url = new URL(`${API_BASE_URL}${fullEndpoint}`, baseUrl);
+    }
 
     if (params) {
         Object.entries(params).forEach(([key, value]) => {
