@@ -1,77 +1,88 @@
 // Usamos la IP directa del backend para que funcione sin Nginx (necesario para .exe/.deb)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://192.168.1.7:3001";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://10.200.23.71:3001";
 
 interface RequestOptions extends RequestInit {
-    params?: Record<string, string>;
+  params?: Record<string, string>;
 }
 
 export async function apiRequest<T>(
-    endpoint: string,
-    { params, ...options }: RequestOptions = {}
+  endpoint: string,
+  { params, ...options }: RequestOptions = {},
 ): Promise<T> {
-    const fullEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    
-    // Si API_BASE_URL es una URL absoluta, la usamos directamente.
-    // Si es una ruta relativa (como "/api"), la combinamos con el origen actual.
-    let url: URL;
-    if (API_BASE_URL.startsWith('http')) {
-        url = new URL(`${API_BASE_URL}${fullEndpoint}`);
-    } else {
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-        url = new URL(`${API_BASE_URL}${fullEndpoint}`, baseUrl);
-    }
+  const fullEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
 
-    if (params) {
-        Object.entries(params).forEach(([key, value]) => {
-            url.searchParams.append(key, value);
-        });
-    }
+  // Si API_BASE_URL es una URL absoluta, la usamos directamente.
+  // Si es una ruta relativa (como "/api"), la combinamos con el origen actual.
+  let url: URL;
+  if (API_BASE_URL.startsWith("http")) {
+    url = new URL(`${API_BASE_URL}${fullEndpoint}`);
+  } else {
+    const baseUrl =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "http://localhost:3000";
+    url = new URL(`${API_BASE_URL}${fullEndpoint}`, baseUrl);
+  }
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-
-    const headers = new Headers(options.headers);
-    headers.set('Content-Type', 'application/json');
-    if (token) {
-        headers.set('Authorization', `Bearer ${token}`);
-    }
-
-    const response = await fetch(url.toString(), {
-        cache: 'no-store',
-        ...options,
-        headers,
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      url.searchParams.append(key, value);
     });
+  }
 
-    if (!response.ok) {
-        let errorData: any = {};
-        try {
-            errorData = await response.json();
-        } catch (e) {
-            // No JSON body
-        }
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
 
-        if (response.status === 401) {
-            console.warn("Error de autenticación: El token ha expirado o no es válido.");
-            if (typeof window !== 'undefined') {
-                localStorage.removeItem('auth_token');
-                window.location.href = '/login';
-            }
-        }
-        
-        const errorMessage = errorData.message || `Error ${response.status}: ${response.statusText}`;
-        console.error(`[API Error] ${options.method || 'GET'} ${endpoint} - ${errorMessage}`, errorData);
-        throw new Error(errorMessage);
+  const headers = new Headers(options.headers);
+  headers.set("Content-Type", "application/json");
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(url.toString(), {
+    cache: "no-store",
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    let errorData: any = {};
+    try {
+      errorData = await response.json();
+    } catch (e) {
+      // No JSON body
     }
 
-    return response.json();
+    if (response.status === 401) {
+      console.warn(
+        "Error de autenticación: El token ha expirado o no es válido.",
+      );
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("auth_token");
+        window.location.href = "/login";
+      }
+    }
+
+    const errorMessage =
+      errorData.message || `Error ${response.status}: ${response.statusText}`;
+    console.error(
+      `[API Error] ${options.method || "GET"} ${endpoint} - ${errorMessage}`,
+      errorData,
+    );
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
 }
 
 export const api = {
-    get: <T>(endpoint: string, params?: Record<string, string>) =>
-        apiRequest<T>(endpoint, { method: 'GET', params }),
-    post: <T>(endpoint: string, body: any) =>
-        apiRequest<T>(endpoint, { method: 'POST', body: JSON.stringify(body) }),
-    patch: <T>(endpoint: string, body: any) =>
-        apiRequest<T>(endpoint, { method: 'PATCH', body: JSON.stringify(body) }),
-    delete: <T>(endpoint: string) =>
-        apiRequest<T>(endpoint, { method: 'DELETE' }),
+  get: <T>(endpoint: string, params?: Record<string, string>) =>
+    apiRequest<T>(endpoint, { method: "GET", params }),
+  post: <T>(endpoint: string, body: any) =>
+    apiRequest<T>(endpoint, { method: "POST", body: JSON.stringify(body) }),
+  patch: <T>(endpoint: string, body: any) =>
+    apiRequest<T>(endpoint, { method: "PATCH", body: JSON.stringify(body) }),
+  delete: <T>(endpoint: string) =>
+    apiRequest<T>(endpoint, { method: "DELETE" }),
 };

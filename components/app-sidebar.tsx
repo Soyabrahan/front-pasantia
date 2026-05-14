@@ -37,11 +37,14 @@ const items = [
     },
 ]
 
+import { ServerStatus } from "@/components/server-status"
+
 export function AppSidebar() {
     const router = useRouter()
     const pathname = usePathname()
     const [userName, setUserName] = useState("Usuario")
-    const { setOpen } = useSidebar()
+    const { setOpen, state } = useSidebar()
+    const isCollapsed = state === "collapsed"
     const { theme, setTheme } = useTheme()
 
     const toggleTheme = () => {
@@ -144,7 +147,12 @@ export function AppSidebar() {
             </SidebarContent>
             <SidebarFooter className="p-4 border-t border-white/10 mt-auto">
                 <div className="flex flex-col gap-4">
+                    <ServerStatus 
+                        hideText={isCollapsed} 
+                        className={isCollapsed ? "items-center" : ""} 
+                    />
                     <div className="flex items-center px-1 overflow-hidden group-data-[collapsible=icon]:hidden justify-between">
+
                         <span className="truncate text-[15px] font-medium text-white/90" style={{ fontFamily: "Arial, sans-serif" }}>
                             Usuario: {userName}
                         </span>

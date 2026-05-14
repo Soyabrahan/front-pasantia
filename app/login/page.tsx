@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { api } from "@/lib/api-client"
 import { toast } from "sonner"
+import { ServerStatus } from "@/components/server-status"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -45,7 +46,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-6 bg-[grid-white-fade]">
-      <div className="w-full max-w-[440px]">
+      <div className="w-full max-w-[440px] space-y-6">
+        <ServerStatus className="bg-[#121212]/50 backdrop-blur-sm border border-white/5 py-3 px-6 rounded-2xl w-fit mx-auto" />
+        
         <div className="bg-[#121212] rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl animate-in zoom-in-95 fade-in duration-500">
           {/* Header Rojo */}
           <div className="bg-[#CC1414] p-10 flex flex-col items-center text-center space-y-4 animate-in slide-in-from-top-8 fade-in duration-700 fill-mode-both">
