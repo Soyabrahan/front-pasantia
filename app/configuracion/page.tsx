@@ -165,9 +165,37 @@ export default function ConfigurationPage() {
         init()
     }, [])
 
-    const handleSaveAjustes = () => {
-        localStorage.setItem("fmo_pases_settings", JSON.stringify(ajustes))
-        toast.success("Ajustes guardados correctamente")
+    const handleSaveAjustes = async () => {
+        try {
+            // Buscamos si el empleado (gerente) ya existe en la lista para obtener su ID
+            const gerenteExistente = empleados.find(e => e.ficha === ajustes.gerenteFicha || e.rol === 'autorizador');
+            
+            const gerenteData = {
+                ficha: ajustes.gerenteFicha,
+                nombre: ajustes.gerenteNombre,
+                cargo: ajustes.gerenteCargo,
+                rol: 'autorizador'
+            };
+
+            if (gerenteExistente) {
+                // Actualizar en la BD
+                await api.patch(`/empleados/${gerenteExistente.id}`, gerenteData);
+            } else {
+                // Crear en la BD
+                await api.post('/empleados', gerenteData);
+            }
+            
+            localStorage.setItem("fmo_pases_settings", JSON.stringify(ajustes));
+            toast.success("Ajustes guardados y sincronizados correctamente");
+            
+            // Recargar empleados para reflejar cambios (aunque se oculte en la tabla principal)
+            const updatedEmpleados = await api.get<any[]>("/empleados").catch(() => []);
+            setEmpleados(updatedEmpleados);
+        } catch (error) {
+            console.error("Error al sincronizar gerente:", error);
+            localStorage.setItem("fmo_pases_settings", JSON.stringify(ajustes));
+            toast.warning("Ajustes guardados localmente, pero hubo un error al sincronizar con el servidor");
+        }
     }
 
     const handleFetchLastNumber = async () => {
@@ -1062,7 +1090,7 @@ export default function ConfigurationPage() {
                                                 <TableRow><TableCell colSpan={5} className="text-center">Cargando empleados...</TableCell></TableRow>
                                             ) : empleados.length === 0 ? (
                                                 <TableRow><TableCell colSpan={5} className="text-center">No hay empleados registrados.</TableCell></TableRow>
-                                            ) : empleados.map((e) => (
+                                            ) : empleados.filter(e => e.rol !== 'autorizador').map((e) => (
                                                 <TableRow key={e.id} className="hover:bg-muted/30 transition-colors">
                                                     {editingEmpleadoId === e.id ? (
                                                         <>

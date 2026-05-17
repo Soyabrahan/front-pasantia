@@ -289,8 +289,9 @@ function MaterialPassForm() {
         autorizadorId: pase.autorizador?.id,
         destinoId: pase.destino?.id,
         vehiculoId: pase.vehiculo?.id,
+        observaciones: pase.observaciones,
+        solicitud: pase.solicitud,
       });
-
       setFormData((prev) => ({
         ...prev,
         folio: pase.numeroPase,
@@ -424,6 +425,13 @@ function MaterialPassForm() {
         e.ficha === ficha && 
         (!role || e.rol?.toLowerCase() === role.toLowerCase())
       );
+      
+      // Fallback para el Autorizador (Gerente) que puede no tener rol en el frontend pero sí en la BD
+      if (!emp && ficha === formData.fichaAutorizador) {
+        const gerente = empleados.find(e => e.ficha === ficha);
+        if (gerente) return gerente.id;
+      }
+
       if (emp) return emp.id;
       return originalId || null;
     };
@@ -436,11 +444,11 @@ function MaterialPassForm() {
       solicitadorId: getEmpleadoId(formData.fichaSolicitante, "Solicitante", originalIds.solicitadorId),
       conductorId: getEmpleadoId(formData.fichaConductor, "Conductor", originalIds.conductorId),
       despachadorId: getEmpleadoId(formData.fichaDespachador, "Despachador", originalIds.despachadorId),
-      autorizadorId: getEmpleadoId(formData.fichaAutorizador, undefined, originalIds.autorizadorId),
+      autorizadorId: getEmpleadoId(formData.fichaAutorizador, "autorizador", originalIds.autorizadorId),
       vehiculoId: formData.vehiculoId || originalIds.vehiculoId,
-      observaciones: "",
+      observaciones: originalIds.observaciones || "",
       tiempo_estimado: formData.tiempoEstimado,
-      solicitud: formData.conceptoOpcion,
+      solicitud: formData.solicitud || formData.conceptoOpcion,
       equipos: items.map((item) => {
         const rawValues = item.identificadores ? item.identificadores.split(',').map(f => f.trim()).filter(f => f !== "") : [];
         const isFMO = item.tipoIdentificador === "FMO";
