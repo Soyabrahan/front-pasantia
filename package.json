@@ -105,7 +105,7 @@
       "icon": "public/images.png"
     },
     "win": {
-      "target": "nsis",
+      "target": "portable",
       "icon": "public/images.png"
     }
   }
