@@ -17,6 +17,31 @@ const outfit = localFont({
   display: 'swap',
 })
 
+const isTokenExpired = (token: string): boolean => {
+  try {
+    const parts = token.split('.')
+    if (parts.length < 2) return true
+    
+    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const pad = base64.length % 4
+    if (pad) {
+      base64 += '='.repeat(4 - pad)
+    }
+    
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+    const payload = JSON.parse(jsonPayload)
+    const expiry = payload.exp * 1000
+    return Date.now() >= expiry
+  } catch (e) {
+    return true
+  }
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -34,7 +59,12 @@ export default function RootLayout({
   useEffect(() => {
     setIsMounted(true)
     const token = typeof window !== 'undefined' ? localStorage.getItem("auth_token") : null
-    const isValidToken = !!token && token !== "null" && token !== "undefined"
+    const isValidToken = !!token && token !== "null" && token !== "undefined" && !isTokenExpired(token)
+
+    if (token && isTokenExpired(token)) {
+      localStorage.removeItem("auth_token")
+      document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+    }
 
     if (!isValidToken && !isAuthPage) {
       setIsLoading(true) 
