@@ -13,7 +13,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Search, Filter, Calendar as CalendarIcon, Eye, User, MapPin, Check, ChevronsUpDown, X, Pencil } from "lucide-react";
+import { Search, Filter, Calendar as CalendarIcon, Eye, User, MapPin, Check, ChevronsUpDown, X, Pencil, FileSpreadsheet } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -53,6 +53,7 @@ export function HistoryTable() {
     const router = useRouter();
     const [data, setData] = useState<PaseRecord[]>([]);
     const [loading, setLoading] = useState(true);
+    const [exportingExcel, setExportingExcel] = useState(false);
     const [filters, setFilters] = useState({
         numeroPase: "",
         equipo: "",
@@ -61,6 +62,25 @@ export function HistoryTable() {
         fechaInicio: undefined as Date | undefined,
         fechaFin: undefined as Date | undefined,
     });
+
+    const handleExportExcel = async () => {
+        if (filteredData.length === 0) {
+            toast.error("No hay datos filtrados para exportar");
+            return;
+        }
+
+        setExportingExcel(true);
+        try {
+            const { generateExcel } = await import("@/lib/generateExcel");
+            generateExcel(filteredData);
+            toast.success("Excel generado correctamente");
+        } catch (error) {
+            console.error("Error generating Excel:", error);
+            toast.error("Error al generar el Excel");
+        } finally {
+            setExportingExcel(false);
+        }
+    };
 
     const [destinos, setDestinos] = useState<any[]>([]);
     const [empleados, setEmpleados] = useState<any[]>([]);
@@ -220,11 +240,23 @@ export function HistoryTable() {
         <div className="space-y-6">
             {/* Filters */}
             <Card className="animate-in slide-in-from-bottom-4 duration-700 delay-100 fill-mode-both border-border/40 bg-card/50 shadow-sm backdrop-blur-sm">
-                <CardHeader className="pb-3 border-b border-border/20">
+                <CardHeader className="pb-3 border-b border-border/20 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
                     <CardTitle className="text-lg font-black flex items-center gap-2 text-foreground uppercase tracking-tight">
                         <Filter className="h-4 w-4 text-primary" />
                         Filtros de Búsqueda
                     </CardTitle>
+                    <Button
+                        onClick={handleExportExcel}
+                        disabled={exportingExcel || loading || filteredData.length === 0}
+                        className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white font-semibold flex items-center gap-2 transition-all shadow-sm border border-emerald-700/50 cursor-pointer h-9 px-4 rounded-md"
+                    >
+                        {exportingExcel ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                        ) : (
+                            <FileSpreadsheet className="h-4 w-4" />
+                        )}
+                        {exportingExcel ? "Exportando..." : "Exportar a Excel"}
+                    </Button>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 pt-4">
                     <div className="space-y-2">

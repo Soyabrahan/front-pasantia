@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { Calendar, Home, Inbox, Search, Settings, Truck, History, LogOut, FileText, Moon, Sun } from "lucide-react"
+import { Calendar, Home, Inbox, Search, Settings, Truck, History, LogOut, FileText, Moon, Sun, ShieldCheck } from "lucide-react"
 import { useTheme } from "next-themes"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -19,7 +19,7 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar"
 
-const items = [
+const baseItems = [
     {
         title: "Pases",
         url: "/", 
@@ -43,6 +43,7 @@ export function AppSidebar() {
     const router = useRouter()
     const pathname = usePathname()
     const [userName, setUserName] = useState("Usuario")
+    const [userRole, setUserRole] = useState("")
     const { setOpen, state } = useSidebar()
     const isCollapsed = state === "collapsed"
     const { theme, setTheme } = useTheme()
@@ -79,15 +80,31 @@ export function AppSidebar() {
                 ).join(''));
                 const payload = JSON.parse(jsonPayload);
                 setUserName(payload.nombre || payload.username || payload.ficha || payload.sub || "Usuario")
+                setUserRole(payload.role || payload.rol || "")
             } catch (e) {
                 console.error("Error decoding token", e)
             }
         }
     }, [])
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        try {
+            const { api } = await import("@/lib/api-client");
+            await api.post("/auth/logout", {});
+        } catch (e) {
+            console.error("Error al notificar logout", e);
+        }
         localStorage.removeItem("auth_token")
         router.push("/login")
+    }
+
+    const items = [...baseItems];
+    if (userRole === "admin" || userRole === "ADMIN" || userRole.toLowerCase() === "administrador") {
+        items.push({
+            title: "Auditoría",
+            url: "/auditoria",
+            icon: ShieldCheck,
+        });
     }
 
     // Colors:
