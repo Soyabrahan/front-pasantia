@@ -1,3 +1,5 @@
+import { redirectToLogin } from "./auth-utils";
+
 // Usamos la IP directa del backend para que funcione sin Nginx (necesario para .exe/.deb)
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://10.200.23.71:3001";
@@ -40,11 +42,18 @@ export async function apiRequest<T>(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(url.toString(), {
-    cache: "no-store",
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), {
+      cache: "no-store",
+      ...options,
+      headers,
+    });
+  } catch (error) {
+    console.error(`[Network Error] ${endpoint} - No se pudo conectar al servidor`, error);
+    redirectToLogin();
+    throw new Error("No se pudo conectar con el servidor. Verifique su conexión.");
+  }
 
   if (!response.ok) {
     let errorData: any = {};

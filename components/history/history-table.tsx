@@ -13,9 +13,18 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Search, Filter, Calendar as CalendarIcon, Eye, User, MapPin, Check, ChevronsUpDown, X, Pencil, FileSpreadsheet } from "lucide-react";
+import { Search, Filter, Calendar as CalendarIcon, Eye, User, MapPin, Check, ChevronsUpDown, X, Pencil, FileSpreadsheet, FileText } from "lucide-react";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
+
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import {
@@ -34,6 +43,14 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+
+const logAuditAction = async (accion: string) => {
+  try {
+    await api.post("/auditoria/log", { accion });
+  } catch (error) {
+    console.warn("No se pudo registrar en auditoría:", error);
+  }
+};
 
 interface PaseRecord {
     id: string;
@@ -54,6 +71,10 @@ export function HistoryTable() {
     const [data, setData] = useState<PaseRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [exportingExcel, setExportingExcel] = useState(false);
+    const [controlDialogOpen, setControlDialogOpen] = useState(false);
+    const [rangeFrom, setRangeFrom] = useState("");
+    const [rangeTo, setRangeTo] = useState("");
+    const [generatingControl, setGeneratingControl] = useState(false);
     const [filters, setFilters] = useState({
         numeroPase: "",
         equipo: "",
@@ -74,11 +95,47 @@ export function HistoryTable() {
             const { generateExcel } = await import("@/lib/generateExcel");
             generateExcel(filteredData);
             toast.success("Excel generado correctamente");
+            logAuditAction("Exportación a Excel");
         } catch (error) {
             console.error("Error generating Excel:", error);
             toast.error("Error al generar el Excel");
         } finally {
             setExportingExcel(false);
+        }
+    };
+
+    const handleGenerateControl = async () => {
+        const from = Number(rangeFrom);
+        const to = Number(rangeTo);
+
+        if (!rangeFrom || !rangeTo || isNaN(from) || isNaN(to)) {
+            toast.error("Ingrese valores numéricos válidos");
+            return;
+        }
+
+        if (from > to) {
+            toast.error("El número 'DESDE' debe ser menor o igual que 'HASTA'");
+            return;
+        }
+
+        const total = to - from + 1;
+        if (total > 200) {
+            toast.error("El rango máximo permitido es de 200 pases");
+            return;
+        }
+
+        setGeneratingControl(true);
+        try {
+            const { generateControlPdf } = await import("@/lib/generateControlPdf");
+            generateControlPdf(data, from, to);
+            toast.success(`Control PDF generado para rango ${from} - ${to}`);
+            setControlDialogOpen(false);
+            logAuditAction(`Exportación de Control PDF (rango ${from} - ${to})`);
+        } catch (error) {
+            console.error("Error generating control PDF:", error);
+            toast.error("Error al generar el Control PDF");
+        } finally {
+            setGeneratingControl(false);
         }
     };
 
@@ -228,6 +285,7 @@ export function HistoryTable() {
             const { generatePDF } = await import("@/lib/generatePdf");
             generatePDF(pdfData, mappedItemsForPDF);
             toast.success("PDF generado correctamente");
+            logAuditAction(`Descarga de PDF - Pase N° ${pase.numeroPase}`);
         } catch (error) {
             console.error("Error generating PDF:", error);
             toast.error("Error al generar el PDF");
@@ -245,18 +303,28 @@ export function HistoryTable() {
                         <Filter className="h-4 w-4 text-primary" />
                         Filtros de Búsqueda
                     </CardTitle>
-                    <Button
-                        onClick={handleExportExcel}
-                        disabled={exportingExcel || loading || filteredData.length === 0}
-                        className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white font-semibold flex items-center gap-2 transition-all shadow-sm border border-emerald-700/50 cursor-pointer h-9 px-4 rounded-md"
-                    >
-                        {exportingExcel ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                        ) : (
-                            <FileSpreadsheet className="h-4 w-4" />
-                        )}
-                        {exportingExcel ? "Exportando..." : "Exportar a Excel"}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={() => setControlDialogOpen(true)}
+                            disabled={loading || data.length === 0}
+                            className="bg-blue-700 hover:bg-blue-800 dark:bg-blue-800 dark:hover:bg-blue-900 text-white font-semibold flex items-center gap-2 transition-all shadow-sm border border-blue-800/50 cursor-pointer h-9 px-4 rounded-md"
+                        >
+                            <FileText className="h-4 w-4" />
+                            Generar Control PDF
+                        </Button>
+                        <Button
+                            onClick={handleExportExcel}
+                            disabled={exportingExcel || loading || filteredData.length === 0}
+                            className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white font-semibold flex items-center gap-2 transition-all shadow-sm border border-emerald-700/50 cursor-pointer h-9 px-4 rounded-md"
+                        >
+                            {exportingExcel ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                            ) : (
+                                <FileSpreadsheet className="h-4 w-4" />
+                            )}
+                            {exportingExcel ? "Exportando..." : "Exportar a Excel"}
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 pt-4">
                     <div className="space-y-2">
@@ -593,6 +661,61 @@ export function HistoryTable() {
                     </Table>
                 </CardContent>
             </Card>
+
+            {/* Control PDF Range Dialog */}
+            <Dialog open={controlDialogOpen} onOpenChange={setControlDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Generar Control de Salidas</DialogTitle>
+                        <DialogDescription>
+                            Indique el rango de números de pase para generar el documento.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-2">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="rangeFrom">N° de Pase DESDE</Label>
+                                <Input
+                                    id="rangeFrom"
+                                    type="number"
+                                    placeholder="Ej: 86000"
+                                    value={rangeFrom}
+                                    onChange={(e) => setRangeFrom(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="rangeTo">N° de Pase HASTA</Label>
+                                <Input
+                                    id="rangeTo"
+                                    type="number"
+                                    placeholder="Ej: 87000"
+                                    value={rangeTo}
+                                    onChange={(e) => setRangeTo(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setControlDialogOpen(false)}
+                            disabled={generatingControl}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={handleGenerateControl}
+                            disabled={generatingControl || !rangeFrom || !rangeTo}
+                            className="bg-blue-700 hover:bg-blue-800 text-white"
+                        >
+                            {generatingControl ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                            ) : null}
+                            {generatingControl ? "Generando..." : "Generar"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

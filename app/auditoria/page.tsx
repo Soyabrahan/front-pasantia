@@ -15,6 +15,7 @@ import {
 import { api } from "@/lib/api-client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { decodeToken, getToken, getTokenRole, isNetworkError, isTokenExpired } from "@/lib/auth-utils";
 
 interface AuditLog {
     id: string;
@@ -33,36 +34,24 @@ export default function AuditoriaPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Verificar rol
-        const token = localStorage.getItem("auth_token");
+        // Verificar token y rol
+        const token = getToken();
         if (!token) {
             router.push("/login");
             return;
         }
 
-        try {
-            const tokenParts = token.split('.');
-            if (tokenParts.length >= 2) {
-                let base64 = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
-                const pad = base64.length % 4;
-                if (pad) {
-                    base64 += '='.repeat(4 - pad);
-                }
-                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
-                    '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-                ).join(''));
-                const payload = JSON.parse(jsonPayload);
-                const rol = payload.role || payload.rol || "";
-                
-                if (rol !== "admin" && rol !== "ADMIN" && rol.toLowerCase() !== "administrador") {
-                    toast.error("No tienes permisos para ver esta página.");
-                    router.push("/");
-                    return;
-                }
-            }
-        } catch (e) {
-            console.error("Error al verificar token", e);
+        const payload = decodeToken(token);
+        if (!payload || isTokenExpired(payload)) {
+            localStorage.removeItem("auth_token");
             router.push("/login");
+            return;
+        }
+
+        const userRole = getTokenRole(payload);
+        if (userRole !== "admin" && userRole !== "administrador") {
+            toast.error("No tienes permisos para ver esta página.");
+            router.push("/");
             return;
         }
 
@@ -73,6 +62,12 @@ export default function AuditoriaPage() {
                 setLogs(data);
             } catch (e) {
                 console.error("Error fetching audit logs", e);
+                if (isNetworkError(e)) {
+                    toast.error("No hay conexión con el servidor. Redirigiendo al login...");
+                    localStorage.removeItem("auth_token");
+                    router.push("/login");
+                    return;
+                }
                 toast.error("Error al cargar los registros de auditoría");
             } finally {
                 setLoading(false);

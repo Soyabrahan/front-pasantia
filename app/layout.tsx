@@ -10,6 +10,7 @@ import { Toaster } from "sonner"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { ThemeProvider } from "@/components/theme-provider"
+import { decodeToken, getToken, hasRequiredRole, isTokenExpired } from "@/lib/auth-utils"
 
 const outfit = localFont({ 
   src: '../public/fonts/Outfit-VariableFont_wght.ttf',
@@ -33,13 +34,26 @@ export default function RootLayout({
 
   useEffect(() => {
     setIsMounted(true)
-    const token = typeof window !== 'undefined' ? localStorage.getItem("auth_token") : null
-    const isValidToken = !!token && token !== "null" && token !== "undefined"
+    const token = getToken()
+    let isValidToken = false
+    let payload = null
+
+    if (token) {
+      payload = decodeToken(token)
+      if (payload && !isTokenExpired(payload)) {
+        isValidToken = true
+      } else {
+        localStorage.removeItem("auth_token")
+      }
+    }
 
     if (!isValidToken && !isAuthPage) {
-      setIsLoading(true) 
+      setIsLoading(true)
       router.push("/login")
     } else if (isValidToken && isAuthPage) {
+      setIsLoading(true)
+      router.push("/")
+    } else if (isValidToken && payload && !hasRequiredRole(payload, pathname)) {
       setIsLoading(true)
       router.push("/")
     } else {

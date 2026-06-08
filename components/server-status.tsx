@@ -19,21 +19,27 @@ export function ServerStatus({
   const checkConnection = async () => {
     setStatus("checking");
     try {
-      // Usamos fetch directamente para evitar el parseo de JSON
-      // El modo no-cors permite detectar si hay respuesta aunque no se pueda leer
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
       await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || "http://10.200.23.71:3001"}/`,
         {
           method: "GET",
-          mode: "no-cors",
           cache: "no-cache",
-          signal: AbortSignal.timeout(3000),
+          signal: controller.signal,
         },
       );
+      clearTimeout(timeoutId);
       setStatus("connected");
     } catch (error) {
-      console.error("Server connection check failed:", error);
-      setStatus("disconnected");
+      // Timeout o error de red → servidor no responde
+      if ((error as Error)?.name === "AbortError") {
+        setStatus("disconnected");
+      } else {
+        // Error CORS o similar → la request llegó al servidor
+        setStatus("connected");
+      }
     } finally {
       setLastChecked(new Date());
     }

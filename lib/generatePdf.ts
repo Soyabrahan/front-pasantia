@@ -300,13 +300,34 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT('DIRIGIDO A:', dirX + 1.5, row5Y + 4, 8, 'normal');
     drawT('SOLICITUD:', solX + 1.5, row5Y + 4, 8, 'normal');
 
+    let observacionFits = true;
+
     if (formData.solicitante) {
-        const usuarioText = `USUARIO: ${formData.solicitante.toUpperCase()} F-${formData.fichaSolicitante || ''} ${formData.cargoSolicitante?.toUpperCase() || ''} DE ${formData.departamentoSolicitante?.toUpperCase() || ''}`;
-        drawT(usuarioText, rightX + 1.5, row5Y + 11, 5.5, 'bold', 'left', (dirX - rightX) - 5);
+        const nombre = formData.solicitante.toUpperCase();
+        const ficha = formData.fichaSolicitante || '';
+        const cargo = formData.cargoSolicitante?.toUpperCase() || '';
+        const depto = formData.departamentoSolicitante?.toUpperCase() || '';
+
+        const line1 = `USUARIO: ${nombre} F-${ficha}`;
+        const cargoPart = cargo + (cargo && depto ? ' DE ' : '') + (depto || '');
+        const fullText = line1 + ' ' + cargoPart;
+        const availWidth = (dirX - rightX) - 5;
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(5.5);
+        observacionFits = doc.getTextWidth(fullText) <= availWidth;
+
+        if (observacionFits) {
+            drawT(fullText, rightX + 1.5, row5Y + 11, 5.5, 'bold', 'left', availWidth);
+        } else {
+            drawT(line1, rightX + 1.5, row5Y + 11, 5.5, 'bold', 'left', availWidth);
+            drawT(cargoPart, rightX + 1.5, row5Y + 15, 5.5, 'bold', 'left', availWidth);
+        }
     }
 
     if (formData.dirigidoA) {
-        drawT(formData.dirigidoA.toUpperCase(), rightX + 1.5, row5Y + 15, 6, 'bold', 'left', dirX - rightX - 3);
+        const dirigidoAY = observacionFits ? row5Y + 15 : row5Y + 19;
+        drawT(formData.dirigidoA.toUpperCase(), rightX + 1.5, dirigidoAY, 6, 'bold', 'left', dirX - rightX - 3);
     }
     if (formData.embarqueseA) {
         drawT(formData.embarqueseA.toUpperCase(), dirX + 1.5, row5Y + 11, 6.5, 'bold', 'left', solX - dirX - 3);

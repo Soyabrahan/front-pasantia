@@ -5,6 +5,7 @@ import { Calendar, Home, Inbox, Search, Settings, Truck, History, LogOut, FileTe
 import { useTheme } from "next-themes"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
+import { decodeToken, getToken, getTokenRole } from "@/lib/auth-utils"
 
 import {
     Sidebar,
@@ -63,26 +64,12 @@ export function AppSidebar() {
     }
 
     useEffect(() => {
-        const token = localStorage.getItem("auth_token")
+        const token = getToken()
         if (token) {
-            try {
-                const tokenParts = token.split('.');
-                if (tokenParts.length < 2) {
-                    throw new Error("Formato de token inválido");
-                }
-                let base64 = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
-                const pad = base64.length % 4;
-                if (pad) {
-                    base64 += '='.repeat(4 - pad);
-                }
-                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
-                    '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-                ).join(''));
-                const payload = JSON.parse(jsonPayload);
+            const payload = decodeToken(token)
+            if (payload) {
                 setUserName(payload.nombre || payload.username || payload.ficha || payload.sub || "Usuario")
-                setUserRole(payload.role || payload.rol || "")
-            } catch (e) {
-                console.error("Error decoding token", e)
+                setUserRole(getTokenRole(payload))
             }
         }
     }, [])
