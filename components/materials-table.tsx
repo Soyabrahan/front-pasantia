@@ -44,7 +44,7 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
   const updateItem = (id: string, field: keyof MaterialItem, value: string) => {
     onItemsChange(
       items.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
+        item.id === id ? { ...item, [field]: value.toUpperCase() } : item
       )
     )
   }
@@ -136,18 +136,18 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
                 </div>
                 <div className="col-span-2">
                   <Input
-                    placeholder="Ej. Lenovo"
+                    placeholder="Ej. LENOVO"
                     value={item.marca}
                     onChange={(e) => updateItem(item.id, "marca", e.target.value)}
-                    className={cn("font-medium", inputStyles)}
+                    className={cn("font-medium uppercase", inputStyles)}
                   />
                 </div>
                 <div className="col-span-2">
                   <Input
-                    placeholder="Ej. Teclado"
+                    placeholder="Ej. TECLADO"
                     value={item.producto}
                     onChange={(e) => updateItem(item.id, "producto", e.target.value)}
-                    className={cn("font-medium", inputStyles)}
+                    className={cn("font-medium uppercase", inputStyles)}
                   />
                 </div>
                 <div className="col-span-2">
@@ -172,7 +172,7 @@ export function MaterialsTable({ items, onItemsChange }: MaterialsTableProps) {
                       }
                       updateItem(item.id, "identificadores", val);
                     }}
-                    className={cn("font-mono text-xs", inputStyles)}
+                    className={cn("font-mono text-xs uppercase", inputStyles)}
                     disabled={item.tipoIdentificador === "S/N"}
                   />
                 </div>

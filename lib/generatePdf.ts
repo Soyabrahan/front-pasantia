@@ -187,6 +187,11 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
         cy += 4;
     });
 
+    const selectedConceptName = checkboxes.find(c => formData.concepto && formData.concepto[c.k as keyof Conceptos])?.l;
+    if (selectedConceptName) {
+        drawT(selectedConceptName, margin + 22, midY + 4, 7, 'bold');
+    }
+
     // "Tiempo estimado" Box
     const timeBoxX = conceptSplitX;
     const timeBoxY = midY + 12; // Shifted down to vertically center
@@ -223,8 +228,8 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     // Row 2: DIRECCIÓN | TELÉFONO | CONTADO | CRÉDITO
     const row2Y = row1Y + rowH;
     const telX = rightX + (rightColW * 0.55);
-    const contX = margin + contentW - 35;
-    const credX = margin + contentW - 18;
+    const contX = margin + contentW - 45;
+    const credX = margin + contentW - 24;
 
     doc.line(rightX, row2Y + rowH, margin + contentW, row2Y + rowH);
     doc.line(telX, row2Y, telX, row2Y + rowH);
@@ -300,8 +305,6 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT('DIRIGIDO A:', dirX + 1.5, row5Y + 4, 8, 'normal');
     drawT('SOLICITUD:', solX + 1.5, row5Y + 4, 8, 'normal');
 
-    let observacionFits = true;
-
     if (formData.solicitante) {
         const nombre = formData.solicitante.toUpperCase();
         const ficha = formData.fichaSolicitante || '';
@@ -313,30 +316,22 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
         const fullText = line1 + ' ' + cargoPart;
         const availWidth = (dirX - rightX) - 5;
 
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(5.5);
-        observacionFits = doc.getTextWidth(fullText) <= availWidth;
-
-        if (observacionFits) {
-            drawT(fullText, rightX + 1.5, row5Y + 11, 5.5, 'bold', 'left', availWidth);
-        } else {
-            drawT(line1, rightX + 1.5, row5Y + 11, 5.5, 'bold', 'left', availWidth);
-            drawT(cargoPart, rightX + 1.5, row5Y + 15, 5.5, 'bold', 'left', availWidth);
-        }
+        drawT(fullText, rightX + 1.5, row5Y + 11, 6.5, 'bold', 'left', availWidth);
     }
 
     if (formData.dirigidoA) {
-        const dirigidoAY = observacionFits ? row5Y + 15 : row5Y + 19;
-        drawT(formData.dirigidoA.toUpperCase(), rightX + 1.5, dirigidoAY, 6, 'bold', 'left', dirX - rightX - 3);
+        drawT(formData.dirigidoA.toUpperCase(), rightX + 1.5, row5Y + 15, 6.5, 'bold', 'left', dirX - rightX - 3);
     }
     if (formData.embarqueseA) {
         drawT(formData.embarqueseA.toUpperCase(), dirX + 1.5, row5Y + 11, 6.5, 'bold', 'left', solX - dirX - 3);
     }
 
-    const concept = formData.conceptoNombre || '';
+    const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const selectedConceptLabel = checkboxes.find(c => formData.concepto && formData.concepto[c.k as keyof Conceptos])?.l || '';
+    const concept = selectedConceptLabel || formData.conceptoNombre || '';
     const detail = formData.solicitud || '';
-    const solicitudFull = (concept.trim().toUpperCase() === detail.trim().toUpperCase()) 
-        ? concept.toUpperCase() 
+    const solicitudFull = (normalize(concept.trim()).toUpperCase() === normalize(detail.trim()).toUpperCase())
+        ? concept
         : `${concept} ${detail}`.trim().toUpperCase();
 
     if (solicitudFull) {
@@ -350,8 +345,8 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT(formData.autorizadoPor?.toUpperCase() || 'CARMEN MÁRQUEZ', margin + 25, authY + 4, 8, 'bold');
 
     drawT('CARGO:', margin + 1.5, authY + 11, 6, 'normal');
-    const cargoAutorizador = formData.cargoAutorizador?.toUpperCase() || 'GERENTE DE TELEMÁTICA (e)';
-    drawT(cargoAutorizador, margin + 15, authY + 11, cargoAutorizador.length > 25 ? 5.5 : 7.5, 'bold');
+    const cargoAutorizador = formData.cargoAutorizador?.toUpperCase() || 'GERENTE DE TELEMÁTICA';
+    drawT(cargoAutorizador, margin + 15, authY + 11, 7, 'bold', 'left', (rightX - margin - 15) - 3);
 
     drawT('FIRMA Y SELLO:', margin + 1.5, authY + 19, 6, 'normal');
 
@@ -359,9 +354,7 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT(formData.fichaAutorizador || '15508', margin + 12, authY + 28, 8, 'bold');
 
     drawT('LUGAR Y FECHA DE EMISIÓN:', margin + 2, authY + 33.5, 5.5, 'normal');
-    const today = new Date();
-    const formattedDate = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
-    drawT(`CIUDAD GUAYANA, ${formattedDate}`, margin + 35, authY + 33.5, 6.5, 'bold', 'left', (rightX - margin - 35) - 3);
+    drawT('PUERTO ORDAZ', margin + 35, authY + 33.5, 6.5, 'bold', 'left', (rightX - margin - 35) - 3);
 
     // ============================================
     // BOTTOM SECTION (Table + Proteccion)
@@ -376,9 +369,9 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT('UNIDAD', margin + 22.5, tableY + 6, 7, 'bold', 'center');
     drawT('DESCRIPCIÓN (INCLUYA MARCA Y SERIAL)', margin + 32, tableY + 6, 7, 'bold');
 
-    drawT('DEPARTAMENTO DE PROTECCIÓN INDUSTRIAL', margin + matW + (sigW / 4), tableY + 4.5, 7, 'bold', 'center');
-    drawT('DEPARTAMENTO DE PROTECCIÓN DE BUQUES E', sigMidX + (sigW / 4), tableY + 4, 7, 'bold', 'center');
-    drawT('INSTALACIONES PORTUARIAS', sigMidX + (sigW / 4), tableY + 7, 7, 'bold', 'center');
+    drawT('DEPARTAMENTO DE PROTECCIÓN INDUSTRIAL', margin + matW + (sigW / 4), tableY + 4.5, 7, 'bold', 'center', sigW / 2 - 5);
+    drawT('DEPARTAMENTO DE PROTECCIÓN DE BUQUES E', sigMidX + (sigW / 4), tableY + 4, 7, 'bold', 'center', sigW / 2 - 5);
+    drawT('INSTALACIONES PORTUARIAS', sigMidX + (sigW / 4), tableY + 7, 7, 'bold', 'center', sigW / 2 - 5);
 
     let ry = tableY + tableHeaderH;
     const itemsToShow = items.slice(0, 6);

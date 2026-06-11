@@ -21,7 +21,7 @@ interface AddEntityModalProps {
   onClose: () => void;
   type: "empleado" | "destino" | "vehiculo";
   role?: string; // Specific for empleado
-  onSuccess: (data: any) => void;
+  onSuccess: (data: any, formData?: any) => void;
   vehiculosDisponibles?: any[]; // Prop opcional para asignar al crear conductor
 }
 
@@ -76,21 +76,24 @@ export function AddEntityModal({
       const numericVal = value.replace(/\D/g, "");
       setEmpleadoData((prev) => ({ ...prev, [name]: numericVal }));
     } else {
-      setEmpleadoData((prev) => ({ ...prev, [name]: value }));
+      setEmpleadoData((prev) => ({ ...prev, [name]: value.toUpperCase() }));
     }
   };
 
   const handleDestinoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setDestinoData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    setDestinoData((prev) => ({ ...prev, [e.target.name]: e.target.value.toUpperCase() }));
   };
 
   const handleVehiculoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target as HTMLInputElement;
+    const { name, value, type } = e.target as HTMLInputElement;
     if (name === "fmo") {
       const numericVal = value.replace(/\D/g, "");
       setVehiculoData((prev) => ({ ...prev, [name]: numericVal }));
+    } else if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setVehiculoData((prev) => ({ ...prev, [name]: checked }));
     } else {
-      setVehiculoData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+      setVehiculoData((prev) => ({ ...prev, [name]: value.toUpperCase() }));
     }
   };
 
@@ -123,19 +126,27 @@ export function AddEntityModal({
               await api.patch(`/vehiculos/${vehicleToAssign.id}`, { conductores: [{ id: result.id }] });
            }
         }
+
+        const empleadoFormData: any = { ...empleadoData, role };
+        if (role === "Conductor") {
+          empleadoFormData.vehicle = vehiculoData;
+          empleadoFormData.vehicleId = showVehicleFields ? null : (selectedVehicleId || null);
+        }
+        onSuccess(result, empleadoFormData);
       } else if (type === "destino") {
         if (!destinoData.nombre || !destinoData.direccion || !destinoData.telefono) {
           throw new Error("Todos los campos del destino son obligatorios");
         }
         result = await api.post("/destinos", destinoData);
+        onSuccess(result, destinoData);
       } else if (type === "vehiculo") {
         if (!vehiculoData.placa || !vehiculoData.marca || !vehiculoData.modelo || (vehiculoData.esFMO && !vehiculoData.fmo)) {
           throw new Error("Todos los campos del vehículo son obligatorios");
         }
         result = await api.post("/vehiculos", vehiculoData);
+        onSuccess(result, vehiculoData);
       }
 
-      onSuccess(result);
       onClose();
     } catch (err: any) {
       setError(err.message || "Error al conectar con el servidor");
@@ -189,10 +200,10 @@ export function AddEntityModal({
                   <Input
                     id="nombre"
                     name="nombre"
-                    placeholder="Nombre completo"
+                    placeholder="NOMBRE COMPLETO"
                     value={empleadoData.nombre}
                     onChange={handleEmpleadoChange}
-                    className={cn("col-span-3", inputClass)}
+                    className={cn("col-span-3 uppercase", inputClass)}
                     required
                   />
                 </div>
@@ -203,10 +214,10 @@ export function AddEntityModal({
                   <Input
                     id="departamento"
                     name="departamento"
-                    placeholder="Ej. Telemática"
+                    placeholder="EJ. TELEMATICA"
                     value={empleadoData.departamento}
                     onChange={handleEmpleadoChange}
-                    className={cn("col-span-3", inputClass)}
+                    className={cn("col-span-3 uppercase", inputClass)}
                     required
                   />
                 </div>
@@ -218,10 +229,10 @@ export function AddEntityModal({
                     <Input
                       id="cargo"
                       name="cargo"
-                      placeholder="Ej. Analista"
+                      placeholder="EJ. ANALISTA"
                       value={empleadoData.cargo}
                       onChange={handleEmpleadoChange}
-                      className={cn("col-span-3", inputClass)}
+                      className={cn("col-span-3 uppercase", inputClass)}
                       required
                     />
                   </div>
@@ -255,10 +266,10 @@ export function AddEntityModal({
                       </select>
                     ) : (
                       <div className="space-y-3 p-3 bg-muted rounded-lg border border-dashed border-border animate-in slide-in-from-top-2">
-                        <Input name="placa" placeholder="Placa (ABC-123) *" value={vehiculoData.placa} onChange={handleVehiculoChange} className={inputClass} required />
+                        <Input name="placa" placeholder="PLACA (ABC-123) *" value={vehiculoData.placa} onChange={handleVehiculoChange} className={cn(inputClass, "uppercase")} required />
                         <div className="grid grid-cols-2 gap-2">
-                          <Input name="marca" placeholder="Marca *" value={vehiculoData.marca} onChange={handleVehiculoChange} className={inputClass} required />
-                          <Input name="modelo" placeholder="Modelo *" value={vehiculoData.modelo} onChange={handleVehiculoChange} className={inputClass} required />
+                          <Input name="marca" placeholder="MARCA *" value={vehiculoData.marca} onChange={handleVehiculoChange} className={cn(inputClass, "uppercase")} required />
+                          <Input name="modelo" placeholder="MODELO *" value={vehiculoData.modelo} onChange={handleVehiculoChange} className={cn(inputClass, "uppercase")} required />
                         </div>
                         <div className="flex items-center gap-2">
                           <input type="checkbox" id="esFMO_modal" name="esFMO" checked={vehiculoData.esFMO} onChange={handleVehiculoChange} />
@@ -279,10 +290,10 @@ export function AddEntityModal({
                   <Input
                     id="nombre_dest"
                     name="nombre"
-                    placeholder="Nombre del destino"
+                    placeholder="NOMBRE DEL DESTINO"
                     value={destinoData.nombre}
                     onChange={handleDestinoChange}
-                    className={cn("col-span-3", inputClass)}
+                    className={cn("col-span-3 uppercase", inputClass)}
                     required
                   />
                 </div>
@@ -293,10 +304,10 @@ export function AddEntityModal({
                   <Input
                     id="direccion"
                     name="direccion"
-                    placeholder="Dirección exacta"
+                    placeholder="DIRECCION EXACTA"
                     value={destinoData.direccion}
                     onChange={handleDestinoChange}
-                    className={cn("col-span-3", inputClass)}
+                    className={cn("col-span-3 uppercase", inputClass)}
                     required
                   />
                 </div>
@@ -307,10 +318,10 @@ export function AddEntityModal({
                   <Input
                     id="telefono"
                     name="telefono"
-                    placeholder="Ej. +58..."
+                    placeholder="EJ. +58..."
                     value={destinoData.telefono}
                     onChange={handleDestinoChange}
-                    className={cn("col-span-3", inputClass)}
+                    className={cn("col-span-3 uppercase", inputClass)}
                     required
                   />
                 </div>
@@ -323,11 +334,11 @@ export function AddEntityModal({
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="marca_v" className={labelClass}>Marca <span className="text-destructive">*</span></Label>
-                  <Input id="marca_v" name="marca" placeholder="Ej. Toyota" value={vehiculoData.marca} onChange={handleVehiculoChange} className={cn("col-span-3", inputClass)} required />
+                  <Input id="marca_v" name="marca" placeholder="EJ. TOYOTA" value={vehiculoData.marca} onChange={handleVehiculoChange} className={cn("col-span-3 uppercase", inputClass)} required />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="modelo_v" className={labelClass}>Modelo <span className="text-destructive">*</span></Label>
-                  <Input id="modelo_v" name="modelo" placeholder="Ej. Hilux" value={vehiculoData.modelo} onChange={handleVehiculoChange} className={cn("col-span-3", inputClass)} required />
+                  <Input id="modelo_v" name="modelo" placeholder="EJ. HILUX" value={vehiculoData.modelo} onChange={handleVehiculoChange} className={cn("col-span-3 uppercase", inputClass)} required />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label className={labelClass}>Tipo</Label>

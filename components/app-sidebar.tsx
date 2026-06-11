@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { Calendar, Home, Inbox, Search, Settings, Truck, History, LogOut, FileText, Moon, Sun, ShieldCheck } from "lucide-react"
+import { Calendar, Home, Inbox, Search, Settings, Truck, History, LogOut, FileText, Moon, Sun, ShieldCheck, LayoutDashboard } from "lucide-react"
 import { useTheme } from "next-themes"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -25,6 +25,11 @@ const baseItems = [
         title: "Pases",
         url: "/", 
         icon: FileText,
+    },
+    {
+        title: "Dashboard",
+        url: "/dashboard", 
+        icon: LayoutDashboard,
     },
     {
         title: "Configuración",

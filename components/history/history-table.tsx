@@ -56,6 +56,7 @@ interface PaseRecord {
     id: string;
     numeroPase: string;
     fecha_emision: string;
+    updatedAt?: string;
     solicitador?: { nombre: string, ficha: string };
     conductor?: { nombre: string, ficha: string };
     vehiculo?: { placa: string, modelo: string };
@@ -64,6 +65,16 @@ interface PaseRecord {
     tiempo_estimado?: string;
     solicitud?: string;
     equiposPases?: any[];
+}
+
+function paseFueEditado(pase: PaseRecord): boolean {
+    if (pase.updatedAt) {
+        const creado = new Date(pase.fecha_emision).getTime();
+        const editado = new Date(pase.updatedAt).getTime();
+        if (editado > creado + 1000) return true;
+    }
+    const editedPases = JSON.parse(localStorage.getItem("edited_pases") || "{}");
+    return !!editedPases[pase.id];
 }
 
 export function HistoryTable() {
@@ -589,7 +600,16 @@ export function HistoryTable() {
                             ) : (
                                 displayData.map((item) => (
                                     <TableRow key={item.id} className="hover:bg-muted/20 transition-colors group cursor-default border-border/20">
-                                        <TableCell className="font-bold text-foreground text-left">{item.numeroPase}</TableCell>
+                                        <TableCell className="font-bold text-foreground text-left">
+                                            <div className="flex items-center gap-2">
+                                                {item.numeroPase}
+                                                {paseFueEditado(item) && (
+                                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400 leading-none">
+                                                        Editado
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </TableCell>
                                         <TableCell className="text-muted-foreground text-left">{new Date(item.fecha_emision).toLocaleDateString()}</TableCell>
                                         <TableCell className="text-left">
                                             <div className="flex flex-col">

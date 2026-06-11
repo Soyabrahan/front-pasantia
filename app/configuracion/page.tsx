@@ -23,7 +23,9 @@ import {
     UserCheck,
     Hash,
     Eye,
-    EyeOff
+    EyeOff,
+    Check,
+    ChevronsUpDown,
 } from "lucide-react"
 import {
     DropdownMenu,
@@ -76,6 +78,22 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+    CommandSeparator,
+} from "@/components/ui/command"
+import { cn } from "@/lib/utils"
+import { AddEntityModal } from "@/components/add-entity-modal"
 import { toast } from "sonner"
 
 import { api } from "@/lib/api-client"
@@ -93,8 +111,8 @@ export default function ConfigurationPage() {
 
     // Ajustes Generales
     const [ajustes, setAjustes] = useState({
-        gerenteNombre: "Carmen Marquez",
-        gerenteCargo: "Gerente de Telemática (e)",
+        gerenteNombre: "Carmen Márquez",
+        gerenteCargo: "Gerente de Telemática",
         gerenteFicha: "15508",
         ultimoFolio: ""
     })
@@ -117,6 +135,10 @@ export default function ConfigurationPage() {
     const [editDestino, setEditDestino] = useState<any>(null)
     const [editingEmpleadoId, setEditingEmpleadoId] = useState<number | null>(null)
     const [editEmpleado, setEditEmpleado] = useState<any>(null)
+
+    // Estados para selector de gerente
+    const [openGerente, setOpenGerente] = useState(false)
+    const [modalTypeConfig, setModalTypeConfig] = useState<"empleado" | null>(null)
 
     // Estados para Cambio de Contraseña
     const [isPassModalOpen, setIsPassModalOpen] = useState(false)
@@ -196,6 +218,23 @@ export default function ConfigurationPage() {
             localStorage.setItem("fmo_pases_settings", JSON.stringify(ajustes));
             toast.warning("Ajustes guardados localmente, pero hubo un error al sincronizar con el servidor");
         }
+    }
+
+    const handleChangeGerente = (emp: any) => {
+        const newAjustes = {
+            ...ajustes,
+            gerenteNombre: emp.nombre,
+            gerenteCargo: emp.cargo || "",
+            gerenteFicha: emp.ficha,
+        }
+        setAjustes(newAjustes)
+        localStorage.setItem("fmo_pases_settings", JSON.stringify(newAjustes))
+        setOpenGerente(false)
+        toast.success("Gerente actualizado correctamente")
+    }
+
+    const openAddModalConfig = () => {
+        setModalTypeConfig("empleado")
     }
 
     const handleFetchLastNumber = async () => {
@@ -490,31 +529,68 @@ export default function ConfigurationPage() {
                                 <CardHeader>
                                     <div className="flex items-center gap-2">
                                         <UserCheck className="h-5 w-5 text-primary" />
-                                        <CardTitle>Autoridad de Telemática</CardTitle>
+                                        <CardTitle>Autoridad de Gerencia</CardTitle>
                                     </div>
                                     <CardDescription>Datos del gerente que autoriza los pases.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div className="space-y-2">
                                         <Label>Nombre del Gerente</Label>
-                                        <Input 
-                                            value={ajustes.gerenteNombre} 
-                                            onChange={e => setAjustes({...ajustes, gerenteNombre: e.target.value})}
-                                        />
+                                        <div className="p-3 bg-muted/20 rounded border font-bold uppercase text-lg">
+                                            {ajustes.gerenteNombre}
+                                        </div>
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Cargo</Label>
-                                        <Input 
-                                            value={ajustes.gerenteCargo} 
-                                            onChange={e => setAjustes({...ajustes, gerenteCargo: e.target.value})}
-                                        />
+                                        <div className="p-3 bg-muted/20 rounded border font-bold uppercase">
+                                            {ajustes.gerenteCargo}
+                                        </div>
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Ficha</Label>
-                                        <Input 
-                                            value={ajustes.gerenteFicha} 
-                                            onChange={e => setAjustes({...ajustes, gerenteFicha: e.target.value})}
-                                        />
+                                        <div className="p-3 bg-muted/20 rounded border font-mono font-bold">
+                                            {ajustes.gerenteFicha}
+                                        </div>
+                                    </div>
+                                    <div className="pt-2">
+                                        <Popover open={openGerente} onOpenChange={setOpenGerente}>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="outline" className="w-full gap-2">
+                                                    <UserCheck className="h-4 w-4" />
+                                                    CAMBIAR GERENTE
+                                                    <ChevronsUpDown className="ml-auto h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[350px] p-0" align="start">
+                                                <Command>
+                                                    <CommandInput placeholder="Buscar autorizador..." className="h-12" />
+                                                    <CommandList>
+                                                        <CommandGroup>
+                                                            <CommandItem onSelect={() => { openAddModalConfig(); setOpenGerente(false); }} className="text-primary font-black py-3">
+                                                                <Plus className="mr-2 h-5 w-5" /> AGREGAR NUEVO AUTORIZADOR
+                                                            </CommandItem>
+                                                        </CommandGroup>
+                                                        <CommandSeparator />
+                                                        <CommandEmpty className="p-4 text-center">
+                                                            No se encontró el empleado.
+                                                        </CommandEmpty>
+                                                        <CommandGroup heading="Autorizadores Registrados">
+                                                            {empleados
+                                                                .filter((e) => e.rol?.toLowerCase() === "autorizador")
+                                                                .map((emp) => (
+                                                                    <CommandItem key={emp.id} value={`${emp.nombre} ${emp.ficha}`} onSelect={() => handleChangeGerente(emp)} className="py-3">
+                                                                        <Check className={cn("mr-2 h-4 w-4", ajustes.gerenteFicha === emp.ficha ? "opacity-100" : "opacity-0")} />
+                                                                        <div className="flex flex-col">
+                                                                            <span className="font-bold">{emp.nombre}</span>
+                                                                            <span className="text-xs text-muted-foreground">Ficha: {emp.ficha} • {emp.cargo}</span>
+                                                                        </div>
+                                                                    </CommandItem>
+                                                                ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -716,8 +792,9 @@ export default function ConfigurationPage() {
                                             <label className="text-sm font-semibold">Nombre Completo</label>
                                             {isEditingProfile ? (
                                                 <Input 
+                                                    className="uppercase"
                                                     value={currentUser?.nombre} 
-                                                    onChange={e => setCurrentUser({...currentUser, nombre: e.target.value})}
+                                                    onChange={e => setCurrentUser({...currentUser, nombre: e.target.value.toUpperCase()})}
                                                 />
                                             ) : (
                                                 <div className="p-2 bg-muted/20 rounded border border-transparent">{currentUser?.nombre}</div>
@@ -969,9 +1046,9 @@ export default function ConfigurationPage() {
                                         <TableBody>
                                             {isAddingDestino && (
                                                 <TableRow className="bg-primary/5">
-                                                    <TableCell><Input placeholder="Nombre / Empresa" className="h-8" value={newDestino.nombre} onChange={e => setNewDestino({...newDestino, nombre: e.target.value})} /></TableCell>
-                                                    <TableCell><Input placeholder="Dirección" className="h-8" value={newDestino.direccion} onChange={e => setNewDestino({...newDestino, direccion: e.target.value})} /></TableCell>
-                                                    <TableCell><Input placeholder="Teléfono" className="h-8" value={newDestino.telefono} onChange={e => setNewDestino({...newDestino, telefono: e.target.value})} /></TableCell>
+                                                    <TableCell><Input placeholder="NOMBRE / EMPRESA" className="h-8 uppercase" value={newDestino.nombre} onChange={e => setNewDestino({...newDestino, nombre: e.target.value.toUpperCase()})} /></TableCell>
+                                                    <TableCell><Input placeholder="DIRECCION" className="h-8 uppercase" value={newDestino.direccion} onChange={e => setNewDestino({...newDestino, direccion: e.target.value.toUpperCase()})} /></TableCell>
+                                                    <TableCell><Input placeholder="TELEFONO" className="h-8 uppercase" value={newDestino.telefono} onChange={e => setNewDestino({...newDestino, telefono: e.target.value.toUpperCase()})} /></TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex justify-end gap-2">
                                                             <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={handleSaveDestino}>
@@ -992,9 +1069,9 @@ export default function ConfigurationPage() {
                                                 <TableRow key={d.id} className="hover:bg-muted/30 transition-colors">
                                                     {editingDestinoId === d.id ? (
                                                         <>
-                                                            <TableCell><Input className="h-8" value={editDestino.nombre} onChange={e => setEditDestino({...editDestino, nombre: e.target.value})} /></TableCell>
-                                                            <TableCell><Input className="h-8" value={editDestino.direccion} onChange={e => setEditDestino({...editDestino, direccion: e.target.value})} /></TableCell>
-                                                            <TableCell><Input className="h-8" value={editDestino.telefono} onChange={e => setEditDestino({...editDestino, telefono: e.target.value})} /></TableCell>
+                                                            <TableCell><Input className="h-8 uppercase" value={editDestino.nombre} onChange={e => setEditDestino({...editDestino, nombre: e.target.value.toUpperCase()})} /></TableCell>
+                                                            <TableCell><Input className="h-8 uppercase" value={editDestino.direccion} onChange={e => setEditDestino({...editDestino, direccion: e.target.value.toUpperCase()})} /></TableCell>
+                                                            <TableCell><Input className="h-8 uppercase" value={editDestino.telefono} onChange={e => setEditDestino({...editDestino, telefono: e.target.value.toUpperCase()})} /></TableCell>
                                                             <TableCell className="text-right">
                                                                 <div className="flex justify-end gap-2">
                                                                     <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => handleUpdateDestino(d.id)}><Save className="h-4 w-4" /></Button>
@@ -1071,9 +1148,9 @@ export default function ConfigurationPage() {
                                             {isAddingEmpleado && (
                                                 <TableRow className="bg-primary/5">
                                                     <TableCell><Input placeholder="Ficha" className="h-8" value={newEmpleado.ficha} onChange={e => setNewEmpleado({...newEmpleado, ficha: e.target.value})} /></TableCell>
-                                                    <TableCell><Input placeholder="Nombre" className="h-8" value={newEmpleado.nombre} onChange={e => setNewEmpleado({...newEmpleado, nombre: e.target.value})} /></TableCell>
-                                                    <TableCell><Input placeholder="Cargo" className="h-8" value={newEmpleado.cargo} onChange={e => setNewEmpleado({...newEmpleado, cargo: e.target.value})} /></TableCell>
-                                                    <TableCell><Input placeholder="Departamento" className="h-8" value={newEmpleado.departamento} onChange={e => setNewEmpleado({...newEmpleado, departamento: e.target.value})} /></TableCell>
+                                                    <TableCell><Input placeholder="NOMBRE" className="h-8 uppercase" value={newEmpleado.nombre} onChange={e => setNewEmpleado({...newEmpleado, nombre: e.target.value.toUpperCase()})} /></TableCell>
+                                                    <TableCell><Input placeholder="CARGO" className="h-8 uppercase" value={newEmpleado.cargo} onChange={e => setNewEmpleado({...newEmpleado, cargo: e.target.value.toUpperCase()})} /></TableCell>
+                                                    <TableCell><Input placeholder="DEPARTAMENTO" className="h-8 uppercase" value={newEmpleado.departamento} onChange={e => setNewEmpleado({...newEmpleado, departamento: e.target.value.toUpperCase()})} /></TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex justify-end gap-2">
                                                             <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={handleSaveEmpleado}>
@@ -1095,9 +1172,9 @@ export default function ConfigurationPage() {
                                                     {editingEmpleadoId === e.id ? (
                                                         <>
                                                             <TableCell><Input className="h-8" value={editEmpleado.ficha} onChange={e => setEditEmpleado({...editEmpleado, ficha: e.target.value})} /></TableCell>
-                                                            <TableCell><Input className="h-8" value={editEmpleado.nombre} onChange={e => setEditEmpleado({...editEmpleado, nombre: e.target.value})} /></TableCell>
-                                                            <TableCell><Input className="h-8" value={editEmpleado.cargo} onChange={e => setEditEmpleado({...editEmpleado, cargo: e.target.value})} /></TableCell>
-                                                            <TableCell><Input className="h-8" value={editEmpleado.departamento} onChange={e => setEditEmpleado({...editEmpleado, departamento: e.target.value})} /></TableCell>
+                                                            <TableCell><Input className="h-8 uppercase" value={editEmpleado.nombre} onChange={e => setEditEmpleado({...editEmpleado, nombre: e.target.value.toUpperCase()})} /></TableCell>
+                                                            <TableCell><Input className="h-8 uppercase" value={editEmpleado.cargo} onChange={e => setEditEmpleado({...editEmpleado, cargo: e.target.value.toUpperCase()})} /></TableCell>
+                                                            <TableCell><Input className="h-8 uppercase" value={editEmpleado.departamento} onChange={e => setEditEmpleado({...editEmpleado, departamento: e.target.value.toUpperCase()})} /></TableCell>
                                                             <TableCell colSpan={2} className="text-right">
                                                                 <div className="flex justify-end gap-2">
                                                                     <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => handleUpdateEmpleado(e.id)}><Save className="h-4 w-4" /></Button>
@@ -1165,6 +1242,25 @@ export default function ConfigurationPage() {
                         </p>
                     </CardContent>
                 </Card>
+
+                <AddEntityModal
+                    isOpen={modalTypeConfig !== null}
+                    onClose={() => setModalTypeConfig(null)}
+                    type="empleado"
+                    role="Autorizador"
+                    onSuccess={async (result, formData) => {
+                        const data = await api.get<any[]>("/empleados");
+                        setEmpleados(data);
+                        if (formData) {
+                            handleChangeGerente({
+                                nombre: formData.nombre,
+                                cargo: formData.cargo,
+                                ficha: formData.ficha,
+                            });
+                        }
+                        setModalTypeConfig(null);
+                    }}
+                />
             </main>
 
             {/* Password Change Dialog */}

@@ -122,7 +122,7 @@ function MaterialPassForm() {
 
     // Authorization Info (Defaults from logic)
     autorizadoPor: "Carmen Marquez",
-    cargoAutorizador: "Gerente de Telemática (e)",
+    cargoAutorizador: "Gerente de Telemática",
     fichaAutorizador: "15508",
 
     // Observations / Request
@@ -201,7 +201,7 @@ function MaterialPassForm() {
   };
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: typeof value === 'string' ? value.toUpperCase() : value }));
   };
 
   const [items, setItems] = useState<MaterialItem[]>([]);
@@ -253,7 +253,7 @@ function MaterialPassForm() {
         setFormData(prev => ({
           ...prev,
           autorizadoPor: settings.gerenteNombre || "Carmen Marquez",
-          cargoAutorizador: settings.gerenteCargo || "Gerente de Telemática (e)",
+          cargoAutorizador: settings.gerenteCargo || "Gerente de Telemática",
           fichaAutorizador: settings.gerenteFicha || "15508",
         }));
       }
@@ -470,7 +470,10 @@ function MaterialPassForm() {
     };
     try {
       if (isEditing && editId) {
-        await api.patch(`/pases/${editId}`, paseBody);
+        const patchResult: any = await api.patch(`/pases/${editId}`, paseBody);
+        const editedPases = JSON.parse(localStorage.getItem("edited_pases") || "{}");
+        editedPases[editId] = patchResult?.updatedAt || new Date().toISOString();
+        localStorage.setItem("edited_pases", JSON.stringify(editedPases));
       } else {
         await api.post("/pases", paseBody);
       }
@@ -567,7 +570,7 @@ function MaterialPassForm() {
     const savedAjustes = localStorage.getItem("fmo_pases_settings");
     let auth = { 
       autorizadoPor: "Carmen Marquez", 
-      cargoAutorizador: "Gerente de Telemática (e)", 
+      cargoAutorizador: "Gerente de Telemática", 
       fichaAutorizador: "15508" 
     };
     if (savedAjustes) {
@@ -691,8 +694,8 @@ function MaterialPassForm() {
               <div className="space-y-3">
                 <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">TIEMPO ESTIMADO DE REGRESO</Label>
                 <Input
-                  className={cn("h-12 text-lg", inputStyles)}
-                  placeholder="Ej. 3 días, 1 semana, Indefinido..."
+                  className={cn("h-12 text-lg uppercase", inputStyles)}
+                  placeholder="Ej. 3 DIAS, 1 SEMANA, INDEFINIDO..."
                   value={formData.tiempoEstimado}
                   onChange={(e) => handleInputChange("tiempoEstimado", e.target.value)}
                 />
@@ -767,16 +770,16 @@ function MaterialPassForm() {
                       </Command>
                     </PopoverContent>
                   </Popover>
-                  <Input className={cn("h-11", readOnlyStyles)} value={formData.embargueseA} readOnly tabIndex={-1} />
+                  <Input className={cn("h-11 uppercase", readOnlyStyles)} value={formData.embargueseA} readOnly tabIndex={-1} />
                 </div>
               </div>
               <div className="space-y-3">
                 <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">TELÉFONO</Label>
-                <Input type="tel" className={cn("h-12 text-lg", readOnlyStyles)} value={formData.telefono} readOnly tabIndex={-1} />
+                <Input type="tel" className={cn("h-12 text-lg uppercase", readOnlyStyles)} value={formData.telefono} readOnly tabIndex={-1} />
               </div>
               <div className="space-y-3 md:col-span-2">
                 <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">DIRECCIÓN</Label>
-                <Input className={cn("h-12 text-lg", readOnlyStyles)} value={formData.direccion} readOnly tabIndex={-1} />
+                <Input className={cn("h-12 text-lg uppercase", readOnlyStyles)} value={formData.direccion} readOnly tabIndex={-1} />
               </div>
             </CardContent>
           </Card>
@@ -792,7 +795,7 @@ function MaterialPassForm() {
               <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3">
                   <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">N° ORDEN DE COMPRA</Label>
-                  <Input className={cn("h-12 text-lg", inputStyles)} value={formData.ordenCompra} onChange={(e) => handleInputChange("ordenCompra", e.target.value)} />
+                  <Input className={cn("h-12 text-lg uppercase", inputStyles)} value={formData.ordenCompra} onChange={(e) => handleInputChange("ordenCompra", e.target.value)} />
                 </div>
                 <div className="space-y-3 pt-1">
                   <Label className="block mb-4 text-base font-black text-foreground font-black uppercase tracking-tight">MÉTODO DE PAGO</Label>
@@ -882,7 +885,7 @@ function MaterialPassForm() {
                       </Command>
                     </PopoverContent>
                   </Popover>
-                  <Input className={cn("h-11", readOnlyStyles)} value={formData.fichaConductor} readOnly placeholder="Ficha / C.I." tabIndex={-1} />
+                  <Input className={cn("h-11 uppercase", readOnlyStyles)} value={formData.fichaConductor} readOnly placeholder="Ficha / C.I." tabIndex={-1} />
                 </div>
               </div>
 
@@ -962,11 +965,11 @@ function MaterialPassForm() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">VEHÍCULO F.M.O.</span>
-                        <Input className={cn("h-11", readOnlyStyles)} value={formData.vehiculoFMO || "N/A"} readOnly tabIndex={-1} />
+                        <Input className={cn("h-11 uppercase", readOnlyStyles)} value={formData.vehiculoFMO || "N/A"} readOnly tabIndex={-1} />
                       </div>
                       <div className="space-y-1.5">
                         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">PLACA / PARTICULAR</span>
-                        <Input className={cn("h-11", readOnlyStyles)} value={formData.vehiculoParticular || "N/A"} readOnly tabIndex={-1} />
+                        <Input className={cn("h-11 uppercase", readOnlyStyles)} value={formData.vehiculoParticular || "N/A"} readOnly tabIndex={-1} />
                       </div>
                     </div>
                   )}
@@ -1039,11 +1042,11 @@ function MaterialPassForm() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">FICHA</span>
-                    <Input className={cn("h-11", readOnlyStyles)} value={formData.fichaDespachador} readOnly tabIndex={-1} />
+                    <Input className={cn("h-11 uppercase", readOnlyStyles)} value={formData.fichaDespachador} readOnly tabIndex={-1} />
                   </div>
                   <div className="space-y-1.5">
                     <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">CARGO</span>
-                    <Input className={cn("h-11", readOnlyStyles)} value={formData.cargoDespachador} readOnly tabIndex={-1} />
+                    <Input className={cn("h-11 uppercase", readOnlyStyles)} value={formData.cargoDespachador} readOnly tabIndex={-1} />
                   </div>
                 </div>
               </div>
@@ -1114,11 +1117,11 @@ function MaterialPassForm() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">FICHA</span>
-                    <Input className={cn("h-11", readOnlyStyles)} value={formData.fichaSolicitante} readOnly tabIndex={-1} />
+                    <Input className={cn("h-11 uppercase", readOnlyStyles)} value={formData.fichaSolicitante} readOnly tabIndex={-1} />
                   </div>
                   <div className="space-y-1.5">
                     <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">CARGO</span>
-                    <Input className={cn("h-11", readOnlyStyles)} value={formData.cargoSolicitante} readOnly tabIndex={-1} />
+                    <Input className={cn("h-11 uppercase", readOnlyStyles)} value={formData.cargoSolicitante} readOnly tabIndex={-1} />
                   </div>
                 </div>
               </div>
@@ -1164,16 +1167,62 @@ function MaterialPassForm() {
         onClose={() => setModalType(null)}
         type={modalType || "empleado"}
         role={modalRole || undefined}
-        onSuccess={async () => {
+        onSuccess={async (result, formData) => {
           if (modalType === "destino") {
             const data = await api.get<Destino[]>("/destinos");
             setDestinos(data);
+            if (formData) {
+              handleInputChange("embargueseA", formData.nombre);
+              handleInputChange("direccion", formData.direccion);
+              handleInputChange("telefono", formData.telefono);
+            }
           } else if (modalType === "empleado") {
             const data = await api.get<any[]>("/empleados");
             setEmpleados(data);
+            if (formData?.role === "Conductor") {
+              handleInputChange("conductor", formData.nombre);
+              handleInputChange("fichaConductor", formData.ficha);
+              const updatedVehiculos = await api.get<any[]>("/vehiculos");
+              setVehiculos(updatedVehiculos);
+              const assignedVehicle = updatedVehiculos.find((v: any) =>
+                v.conductores?.some((c: any) =>
+                  c.id?.toString() === result?.id?.toString() ||
+                  c.ficha === formData.ficha
+                )
+              );
+              if (assignedVehicle) {
+                handleInputChange("vehiculoId", assignedVehicle.id);
+                if (assignedVehicle.esFMO) {
+                  handleInputChange("vehiculoParticular", assignedVehicle.placa || "");
+                  handleInputChange("vehiculoFMO", assignedVehicle.fmo);
+                } else {
+                  handleInputChange("vehiculoParticular", assignedVehicle.placa);
+                  handleInputChange("vehiculoFMO", "");
+                }
+              }
+            } else if (formData?.role === "Solicitante") {
+              handleInputChange("solicitante", formData.nombre);
+              handleInputChange("fichaSolicitante", formData.ficha);
+              handleInputChange("cargoSolicitante", formData.cargo || "");
+              handleInputChange("departamentoSolicitante", formData.departamento || "");
+            } else if (formData?.role === "Despachador") {
+              handleInputChange("despachadoPor", formData.nombre);
+              handleInputChange("fichaDespachador", formData.ficha);
+              handleInputChange("cargoDespachador", formData.cargo || "");
+              handleInputChange("departamentoDespachador", formData.departamento || "");
+            }
           } else if (modalType === "vehiculo") {
             const data = await api.get<any[]>("/vehiculos");
             setVehiculos(data);
+            if (formData) {
+              if (formData.esFMO) {
+                handleInputChange("vehiculoParticular", formData.placa || "");
+                handleInputChange("vehiculoFMO", formData.fmo);
+              } else {
+                handleInputChange("vehiculoParticular", formData.placa);
+                handleInputChange("vehiculoFMO", "");
+              }
+            }
           }
           setModalType(null);
         }}

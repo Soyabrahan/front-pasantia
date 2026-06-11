@@ -1,6 +1,6 @@
 {
-  "name": "my-v0-project",
-  "version": "0.1.0",
+  "name": "Ferropases",
+  "version": "1.0.0",
   "description": "Sistema de gestión de pasantías Ferro",
   "author": "Ferrominera Orinoco <admin@ferrominera.com>",
   "private": true,
@@ -88,8 +88,8 @@
     "wait-on": "^8.0.5"
   },
   "build": {
-    "appId": "com.ferro.pasantia",
-    "productName": "Ferro Pasantia",
+    "appId": "com.ferroPases",
+    "productName": "FerroPases",
     "directories": {
       "output": "dist"
     },
@@ -108,6 +108,11 @@
     "win": {
       "target": "portable",
       "icon": "public/images.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
     }
   }
 }
