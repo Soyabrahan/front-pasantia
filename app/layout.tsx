@@ -10,6 +10,7 @@ import { Toaster } from "sonner"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { ThemeProvider } from "@/components/theme-provider"
+import { KeyboardShortcuts } from "@/components/keyboard-shortcuts"
 import { decodeToken, getToken, hasRequiredRole, isTokenExpired } from "@/lib/auth-utils"
 
 const outfit = localFont({ 
@@ -79,12 +80,15 @@ export default function RootLayout({
               {isAuthPage ? (
                 <main>{children}</main>
               ) : (
-                <SidebarProvider>
-                  <AppSidebar />
-                  <SidebarInset className="bg-background">
-                    {children}
-                  </SidebarInset>
-                </SidebarProvider>
+                <>
+                  <SidebarProvider>
+                    <AppSidebar />
+                    <SidebarInset className="bg-background">
+                      {children}
+                    </SidebarInset>
+                  </SidebarProvider>
+                  <KeyboardShortcuts />
+                </>
               )}
               <Toaster position="top-right" richColors theme="dark" />
               <Analytics />

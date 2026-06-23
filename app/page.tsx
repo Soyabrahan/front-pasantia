@@ -83,6 +83,8 @@ function MaterialPassForm() {
   const [loadingVehiculos, setLoadingVehiculos] = useState(true);
   const [mounted, setMounted] = useState(false);
   
+  const [formatoObservacion, setFormatoObservacion] = useState<"detallada" | "solo-solicitante" | "libre">("detallada");
+
   // Validation Modal State
   const [validationModal, setValidationModal] = useState({
     isOpen: false,
@@ -128,6 +130,7 @@ function MaterialPassForm() {
     // Observations / Request
 
     solicitud: "",
+    observacionLibre: "",
 
     // Applicant Info
     solicitante: "",
@@ -391,13 +394,13 @@ function MaterialPassForm() {
       { field: 'fichaConductor', name: 'Ficha Conductor' },
       { field: 'despachadoPor', name: 'Material Despachado Por' },
       { field: 'fichaDespachador', name: 'Ficha Despachador' },
-      { field: 'solicitante', name: 'Solicitante' },
+      ...(formatoObservacion !== "libre" ? [{ field: 'solicitante' as const, name: 'Solicitante' }] : []),
     ];
     const missingFields = requiredFields.filter(rf => !formData[rf.field as keyof typeof formData]);
     
     // Check if any material item has missing mandatory fields (except brand)
     const hasInvalidItems = items.some(item => 
-      !item.cantidad || !item.unidad || !item.producto || (item.tipoIdentificador !== "S/N" && !item.identificadores)
+      !item.cantidad || Number(item.cantidad) === 0 || !item.unidad || !item.producto || (item.tipoIdentificador !== "S/N" && !item.identificadores)
     );
 
     if (hasInvalidItems) {
@@ -527,6 +530,8 @@ function MaterialPassForm() {
         fichaSolicitante: formData.fichaSolicitante,
         cargoSolicitante: formData.cargoSolicitante,
         departamentoSolicitante: formData.departamentoSolicitante,
+        formatoObservacion,
+        observacionLibre: formData.observacionLibre,
       };
       const mappedItemsForPDF = items.map(item => ({
         cantidad: item.cantidad,
@@ -601,11 +606,13 @@ function MaterialPassForm() {
       ...auth,
       vehiculoId: null,
       solicitud: "",
+      observacionLibre: "",
       solicitante: "",
       fichaSolicitante: "",
       cargoSolicitante: "",
       departamentoSolicitante: "",
     }));
+    setFormatoObservacion("detallada");
     fetchUltimoNumero();
     setItems([]);
     setOriginalIds({});
@@ -669,7 +676,7 @@ function MaterialPassForm() {
                   <span className="text-[10px] font-black text-primary/60 uppercase tracking-[0.3em]">
                     N° DE CONTROL
                   </span>
-                  <span className="font-mono font-black text-4xl text-primary leading-none">
+                  <span className="font-mono font-black text-4xl dark:text-white text-black leading-none">
                     {formData.folio}
                   </span>
                 </div>
@@ -1063,66 +1070,104 @@ function MaterialPassForm() {
             <CardContent className="pt-6">
               <div className="space-y-6">
                 <div className="space-y-3">
-                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">SOLICITANTE</Label>
-                  <Popover open={openSolicitante} onOpenChange={setOpenSolicitante}>
-                    <PopoverTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        role="combobox" 
-                        className={cn("w-full h-12 justify-between text-lg", inputStyles)}
-                        onKeyDown={(e) => { if (e.key === "Enter") setOpenSolicitante(true); }}
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <User className="h-5 w-5 text-primary/70" />
-                          {formData.solicitante || "Seleccionar solicitante..."}
-                        </div>
-                        <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Buscar solicitante..." className="h-12" />
-                        <CommandList>
-                          <CommandGroup>
-                            <CommandItem onSelect={() => { openAddModal("empleado", "Solicitante"); setOpenSolicitante(false); }} className="text-primary font-black py-3">
-                              <Plus className="mr-2 h-5 w-5" /> AGREGAR NUEVO SOLICITANTE
-                            </CommandItem>
-                          </CommandGroup>
-                          <CommandSeparator />
-                          <CommandEmpty className="p-4 text-center">No se encontró el empleado.</CommandEmpty>
-                          <CommandGroup heading="Solicitantes">
-                            {empleados
-                              .filter((e) => e.rol?.toLowerCase() === "solicitante")
-                              .map((emp) => (
-                                <CommandItem key={emp.id} value={`${emp.nombre} ${emp.ficha}`} onSelect={() => {
-                                  handleInputChange("solicitante", emp.nombre);
-                                  handleInputChange("fichaSolicitante", emp.ficha);
-                                  handleInputChange("cargoSolicitante", emp.cargo || "");
-                                  handleInputChange("departamentoSolicitante", emp.departamento || "");
-                                  setOpenSolicitante(false);
-                                }} className="py-3">
-                                  <Check className={cn("mr-2 h-4 w-4", formData.fichaSolicitante === emp.ficha ? "opacity-100" : "opacity-0")} />
-                                  <div className="flex flex-col">
-                                    <span className="font-bold">{emp.nombre}</span>
-                                    <span className="text-xs text-muted-foreground">Ficha: {emp.ficha} • {emp.cargo}</span>
-                                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">SOLICITANTE</Label>
+                    <div className="flex gap-1">
+                      {(["detallada", "solo-solicitante", "libre"] as const).map((modo) => (
+                        <button
+                          key={modo}
+                          type="button"
+                          onClick={() => {
+                            setFormatoObservacion(modo);
+                            if (modo === "libre") {
+                              handleInputChange("solicitante", "");
+                              handleInputChange("fichaSolicitante", "");
+                              handleInputChange("cargoSolicitante", "");
+                              handleInputChange("departamentoSolicitante", "");
+                            }
+                          }}
+                          className={cn(
+                            "px-2.5 py-1 text-[11px] font-black uppercase tracking-wider rounded-md transition-colors border",
+                            formatoObservacion === modo
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                              : "bg-background text-muted-foreground border-border hover:bg-muted/50"
+                          )}
+                        >
+                          {modo === "detallada" ? "Detallada" : modo === "solo-solicitante" ? "Solo Sol." : "Libre"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {formatoObservacion === "libre" ? (
+                    <Textarea
+                      className={cn("h-24 text-base uppercase", inputStyles)}
+                      placeholder="Escriba la observación libremente..."
+                      value={formData.observacionLibre}
+                      onChange={(e) => handleInputChange("observacionLibre", e.target.value)}
+                    />
+                  ) : (
+                    <>
+                      <Popover open={openSolicitante} onOpenChange={setOpenSolicitante}>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            role="combobox" 
+                            className={cn("w-full h-12 justify-between text-lg", inputStyles)}
+                            onKeyDown={(e) => { if (e.key === "Enter") setOpenSolicitante(true); }}
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <User className="h-5 w-5 text-primary/70" />
+                              {formData.solicitante || "Seleccionar solicitante..."}
+                            </div>
+                            <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[400px] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Buscar solicitante..." className="h-12" />
+                            <CommandList>
+                              <CommandGroup>
+                                <CommandItem onSelect={() => { openAddModal("empleado", "Solicitante"); setOpenSolicitante(false); }} className="text-primary font-black py-3">
+                                  <Plus className="mr-2 h-5 w-5" /> AGREGAR NUEVO SOLICITANTE
                                 </CommandItem>
-                              ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">FICHA</span>
-                    <Input className={cn("h-11 uppercase", readOnlyStyles)} value={formData.fichaSolicitante} readOnly tabIndex={-1} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">CARGO</span>
-                    <Input className={cn("h-11 uppercase", readOnlyStyles)} value={formData.cargoSolicitante} readOnly tabIndex={-1} />
-                  </div>
+                              </CommandGroup>
+                              <CommandSeparator />
+                              <CommandEmpty className="p-4 text-center">No se encontró el empleado.</CommandEmpty>
+                              <CommandGroup heading="Solicitantes">
+                                {empleados
+                                  .filter((e) => e.rol?.toLowerCase() === "solicitante")
+                                  .map((emp) => (
+                                    <CommandItem key={emp.id} value={`${emp.nombre} ${emp.ficha}`} onSelect={() => {
+                                      handleInputChange("solicitante", emp.nombre);
+                                      handleInputChange("fichaSolicitante", emp.ficha);
+                                      handleInputChange("cargoSolicitante", emp.cargo || "");
+                                      handleInputChange("departamentoSolicitante", emp.departamento || "");
+                                      setOpenSolicitante(false);
+                                    }} className="py-3">
+                                      <Check className={cn("mr-2 h-4 w-4", formData.fichaSolicitante === emp.ficha ? "opacity-100" : "opacity-0")} />
+                                      <div className="flex flex-col">
+                                        <span className="font-bold">{emp.nombre}</span>
+                                        <span className="text-xs text-muted-foreground">Ficha: {emp.ficha} • {emp.cargo}</span>
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">FICHA</span>
+                          <Input className={cn("h-11 uppercase", readOnlyStyles)} value={formData.fichaSolicitante} readOnly tabIndex={-1} />
+                        </div>
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">CARGO</span>
+                          <Input className={cn("h-11 uppercase", readOnlyStyles)} value={formData.cargoSolicitante} readOnly tabIndex={-1} />
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </CardContent>

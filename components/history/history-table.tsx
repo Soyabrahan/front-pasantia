@@ -81,11 +81,11 @@ export function HistoryTable() {
     const router = useRouter();
     const [data, setData] = useState<PaseRecord[]>([]);
     const [loading, setLoading] = useState(true);
-    const [exportingExcel, setExportingExcel] = useState(false);
     const [controlDialogOpen, setControlDialogOpen] = useState(false);
     const [rangeFrom, setRangeFrom] = useState("");
     const [rangeTo, setRangeTo] = useState("");
     const [generatingControl, setGeneratingControl] = useState(false);
+    const [controlFormat, setControlFormat] = useState<"pdf" | "excel">("pdf");
     const [filters, setFilters] = useState({
         numeroPase: "",
         equipo: "",
@@ -95,24 +95,13 @@ export function HistoryTable() {
         fechaFin: undefined as Date | undefined,
     });
 
-    const handleExportExcel = async () => {
+    const handleExportExcel = () => {
         if (filteredData.length === 0) {
             toast.error("No hay datos filtrados para exportar");
             return;
         }
-
-        setExportingExcel(true);
-        try {
-            const { generateExcel } = await import("@/lib/generateExcel");
-            generateExcel(filteredData);
-            toast.success("Excel generado correctamente");
-            logAuditAction("Exportación a Excel");
-        } catch (error) {
-            console.error("Error generating Excel:", error);
-            toast.error("Error al generar el Excel");
-        } finally {
-            setExportingExcel(false);
-        }
+        setControlFormat("excel");
+        setControlDialogOpen(true);
     };
 
     const handleGenerateControl = async () => {
@@ -137,14 +126,22 @@ export function HistoryTable() {
 
         setGeneratingControl(true);
         try {
-            const { generateControlPdf } = await import("@/lib/generateControlPdf");
-            generateControlPdf(data, from, to);
-            toast.success(`Control PDF generado para rango ${from} - ${to}`);
+            if (controlFormat === "pdf") {
+                const { generateControlPdf } = await import("@/lib/generateControlPdf");
+                generateControlPdf(data, from, to);
+                toast.success(`Control PDF generado para rango ${from} - ${to}`);
+                logAuditAction(`Exportación de Control PDF (rango ${from} - ${to})`);
+            } else {
+                const { generateControlExcel } = await import("@/lib/generateControlExcel");
+                generateControlExcel(data, from, to);
+                toast.success(`Control Excel generado para rango ${from} - ${to}`);
+                logAuditAction(`Exportación de Control Excel (rango ${from} - ${to})`);
+            }
             setControlDialogOpen(false);
-            logAuditAction(`Exportación de Control PDF (rango ${from} - ${to})`);
         } catch (error) {
-            console.error("Error generating control PDF:", error);
-            toast.error("Error al generar el Control PDF");
+            console.error("Error generating control:", error);
+            const label = controlFormat === "pdf" ? "PDF" : "Excel";
+            toast.error(`Error al generar el Control ${label}`);
         } finally {
             setGeneratingControl(false);
         }
@@ -316,7 +313,10 @@ export function HistoryTable() {
                     </CardTitle>
                     <div className="flex items-center gap-2">
                         <Button
-                            onClick={() => setControlDialogOpen(true)}
+                            onClick={() => {
+                                setControlFormat("pdf");
+                                setControlDialogOpen(true);
+                            }}
                             disabled={loading || data.length === 0}
                             className="bg-blue-700 hover:bg-blue-800 dark:bg-blue-800 dark:hover:bg-blue-900 text-white font-semibold flex items-center gap-2 transition-all shadow-sm border border-blue-800/50 cursor-pointer h-9 px-4 rounded-md"
                         >
@@ -325,15 +325,11 @@ export function HistoryTable() {
                         </Button>
                         <Button
                             onClick={handleExportExcel}
-                            disabled={exportingExcel || loading || filteredData.length === 0}
+                            disabled={loading || filteredData.length === 0}
                             className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white font-semibold flex items-center gap-2 transition-all shadow-sm border border-emerald-700/50 cursor-pointer h-9 px-4 rounded-md"
                         >
-                            {exportingExcel ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                            ) : (
-                                <FileSpreadsheet className="h-4 w-4" />
-                            )}
-                            {exportingExcel ? "Exportando..." : "Exportar a Excel"}
+                            <FileSpreadsheet className="h-4 w-4" />
+                            Exportar a Excel
                         </Button>
                     </div>
                 </CardHeader>
@@ -682,11 +678,11 @@ export function HistoryTable() {
                 </CardContent>
             </Card>
 
-            {/* Control PDF Range Dialog */}
+            {/* Control Range Dialog */}
             <Dialog open={controlDialogOpen} onOpenChange={setControlDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Generar Control de Salidas</DialogTitle>
+                        <DialogTitle>{controlFormat === "pdf" ? "Generar Control PDF" : "Generar Control Excel"}</DialogTitle>
                         <DialogDescription>
                             Indique el rango de números de pase para generar el documento.
                         </DialogDescription>
@@ -726,12 +722,12 @@ export function HistoryTable() {
                         <Button
                             onClick={handleGenerateControl}
                             disabled={generatingControl || !rangeFrom || !rangeTo}
-                            className="bg-blue-700 hover:bg-blue-800 text-white"
+                            className={controlFormat === "pdf" ? "bg-blue-700 hover:bg-blue-800 text-white" : "bg-emerald-600 hover:bg-emerald-700 text-white"}
                         >
                             {generatingControl ? (
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                             ) : null}
-                            {generatingControl ? "Generando..." : "Generar"}
+                            {generatingControl ? "Generando..." : `Generar ${controlFormat === "pdf" ? "PDF" : "Excel"}`}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

@@ -26,6 +26,7 @@ import {
     EyeOff,
     Check,
     ChevronsUpDown,
+    Tag,
 } from "lucide-react"
 import {
     DropdownMenu,
@@ -135,6 +136,11 @@ export default function ConfigurationPage() {
     const [editDestino, setEditDestino] = useState<any>(null)
     const [editingEmpleadoId, setEditingEmpleadoId] = useState<number | null>(null)
     const [editEmpleado, setEditEmpleado] = useState<any>(null)
+    const [marcas, setMarcas] = useState<any[]>([])
+    const [isAddingMarca, setIsAddingMarca] = useState(false)
+    const [newMarca, setNewMarca] = useState({ nombre: "" })
+    const [editingMarcaId, setEditingMarcaId] = useState<number | null>(null)
+    const [editMarca, setEditMarca] = useState<any>(null)
 
     // Estados para selector de gerente
     const [openGerente, setOpenGerente] = useState(false)
@@ -150,16 +156,18 @@ export default function ConfigurationPage() {
     const fetchAll = async () => {
         setLoading(true)
         try {
-            const [u, v, d, e] = await Promise.all([
+            const [u, v, d, e, m] = await Promise.all([
                 api.get<any[]>("/usuarios/all").catch(() => []), 
                 api.get<any[]>("/vehiculos"),
                 api.get<any[]>("/destinos"),
                 api.get<any[]>("/empleados").catch(() => []),
+                api.get<any[]>("/marcas").catch(() => []),
             ])
             setUsuarios(u)
             setVehiculos(v)
             setDestinos(d)
             setEmpleados(e)
+            setMarcas(m)
         } catch (error) {
             console.error("Error loading config data:", error)
         } finally {
@@ -398,6 +406,37 @@ export default function ConfigurationPage() {
         }
     }
 
+    const handleSaveMarca = async () => {
+        try {
+            const saved = await api.post<any>("/marcas", newMarca)
+            setMarcas([...marcas, saved])
+            setIsAddingMarca(false)
+            setNewMarca({ nombre: "" })
+        } catch (error) {
+            alert("Error al guardar marca")
+        }
+    }
+
+    const handleUpdateMarca = async (id: number) => {
+        try {
+            const updated = await api.patch<any>(`/marcas/${id}`, editMarca)
+            setMarcas(marcas.map(m => m.id === id ? updated : m))
+            setEditingMarcaId(null)
+        } catch (error) {
+            alert("Error al actualizar marca")
+        }
+    }
+
+    const handleDeleteMarca = async (id: number) => {
+        if (!confirm("¿Borrar marca?")) return
+        try {
+            await api.delete(`/marcas/${id}`)
+            setMarcas(marcas.filter(m => m.id !== id))
+        } catch (error) {
+            alert("Error al borrar")
+        }
+    }
+
     const handleDeleteUsuario = async (id: number) => {
         if (!confirm("¿Estás seguro de eliminar este usuario?")) return
         try {
@@ -499,7 +538,7 @@ export default function ConfigurationPage() {
             <main className="p-6 space-y-6 max-w-6xl mx-auto animate-fadeIn">
 
                 <Tabs defaultValue="usuarios" className="w-full" onValueChange={setActiveTab}>
-                    <TabsList className="grid w-full grid-cols-5 md:w-[650px] mb-4">
+                    <TabsList className="grid w-full grid-cols-6 md:w-[780px] mb-4">
                         <TabsTrigger value="usuarios" className="flex gap-2 text-xs md:text-sm">
                             <UsersIcon className="h-4 w-4" />
                             Usuarios
@@ -511,6 +550,10 @@ export default function ConfigurationPage() {
                         <TabsTrigger value="destinos" className="flex gap-2 text-xs md:text-sm">
                             <MapPin className="h-4 w-4" />
                             Destinos
+                        </TabsTrigger>
+                        <TabsTrigger value="marcas" className="flex gap-2 text-xs md:text-sm">
+                            <Tag className="h-4 w-4" />
+                            Marcas
                         </TabsTrigger>
                         <TabsTrigger value="empleados" className="flex gap-2 text-xs md:text-sm">
                             <User className="h-4 w-4" />
@@ -1104,6 +1147,113 @@ export default function ConfigurationPage() {
                                                 </TableRow>
                                             ))}
 
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* MARCAS TAB */}
+                    <TabsContent value="marcas">
+                        <Card className="border-border shadow-sm animate-in fade-in zoom-in-95 duration-500">
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                <div className="space-y-1">
+                                    <CardTitle>Marcas Registradas</CardTitle>
+                                    <CardDescription>
+                                        Marcas de equipos y materiales para autocompletar en los pases.
+                                    </CardDescription>
+                                </div>
+                                <Button 
+                                    size="sm" 
+                                    className="gap-2"
+                                    onClick={() => setIsAddingMarca(true)}
+                                    disabled={isAddingMarca}
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    Nueva Marca
+                                </Button>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="rounded-md border border-border overflow-hidden">
+                                    <Table>
+                                        <TableHeader className="bg-muted/50">
+                                            <TableRow>
+                                                <TableHead>Nombre</TableHead>
+                                                <TableHead className="text-right">Acciones</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {isAddingMarca && (
+                                                <TableRow className="bg-primary/5">
+                                                    <TableCell>
+                                                        <Input 
+                                                            placeholder="NOMBRE DE LA MARCA" 
+                                                            className="h-8 uppercase" 
+                                                            value={newMarca.nombre} 
+                                                            onChange={e => setNewMarca({...newMarca, nombre: e.target.value.toUpperCase()})} 
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={handleSaveMarca}>
+                                                                <Save className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => setIsAddingMarca(false)}>
+                                                                <X className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                            {loading ? (
+                                                <TableRow><TableCell colSpan={2} className="text-center">Cargando marcas...</TableCell></TableRow>
+                                            ) : marcas.length === 0 ? (
+                                                <TableRow><TableCell colSpan={2} className="text-center">No hay marcas registradas.</TableCell></TableRow>
+                                            ) : marcas.map((m) => (
+                                                <TableRow key={m.id} className="hover:bg-muted/30 transition-colors">
+                                                    {editingMarcaId === m.id ? (
+                                                        <>
+                                                            <TableCell>
+                                                                <Input 
+                                                                    className="h-8 uppercase" 
+                                                                    value={editMarca.nombre} 
+                                                                    onChange={e => setEditMarca({...editMarca, nombre: e.target.value.toUpperCase()})} 
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex justify-end gap-2">
+                                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => handleUpdateMarca(m.id)}>
+                                                                        <Save className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => setEditingMarcaId(null)}>
+                                                                        <X className="h-4 w-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            </TableCell>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <TableCell className="font-semibold uppercase tracking-wider">{m.nombre}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end">
+                                                                        <DropdownMenuItem onClick={() => { setEditingMarcaId(m.id); setEditMarca({...m}); }}>
+                                                                            <Edit className="h-4 w-4 mr-2" /> Editar
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteMarca(m.id)}>
+                                                                            <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                                                                        </DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </TableCell>
+                                                        </>
+                                                    )}
+                                                </TableRow>
+                                            ))}
                                         </TableBody>
                                     </Table>
                                 </div>

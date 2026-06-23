@@ -1,127 +1,139 @@
-# Proyecto Pasantía - Guía de Instalación y Despliegue
+# FERPASES - Manual Técnico de Instalación y Despliegue
 
-Este documento explica paso a paso cómo instalar, configurar y desplegar el proyecto (Frontend + Backend) en un entorno de producción utilizando **PM2** y **Nginx**.
+Sistema de gestión de pases para materiales y misceláneos de CVG Ferrominera Orinoco.
 
-## 📋 Requisitos Previos
+## Requisitos del Sistema
 
-Antes de comenzar, asegúrate de tener instalados los siguientes programas en tu servidor o máquina local:
+| Componente | Versión Mínima |
+|---|---|
+| Node.js | 18.x o superior |
+| npm | 9.x o superior |
+| PostgreSQL | 15 |
+| Nginx | Cualquier versión estable |
+| PM2 | Última (instalar global) |
+| Docker (opcional) | 24.x |
 
-- **Node.js** (v18 o superior recomendado)
-- **Git**
-- **Nginx** (Para servir el frontend y actuar como proxy inverso)
-- **PM2** (Gestor de procesos de Node.js, se instala vía npm)
-
-Para instalar PM2 globalmente, ejecuta:
 ```bash
 npm install -g pm2
 ```
 
 ---
 
-## 🚀 1. Instalación del Proyecto
+## 1. Backend (NestJS)
 
-### 1.1. Clonar el repositorio
+### 1.1 Estructura
 
-Clona el proyecto en el directorio deseado (por ejemplo, `/var/www/pasantia`):
-
-```bash
-git clone <URL_DEL_REPOSITORIO> pasantia
-cd pasantia
+```
+backend_pasantia/
+├── src/              # Código fuente TypeScript
+├── dist/             # Compilado (generado con npm run build)
+├── .env              # Variables de entorno
+└── docker-compose.yml
 ```
 
-*(Nota: Asegúrate de reemplazar `<URL_DEL_REPOSITORIO>` por la URL real de tu Git).*
+### 1.2 Variables de Entorno
 
-### 1.2. Instalar dependencias del Backend
+Archivo `backend_pasantia/.env`:
 
-El backend está desarrollado con NestJS.
+```env
+JWT_SECRET=super-secret-key-pasantia-2026
+PORT=3001
+```
+
+### 1.3 Base de Datos
+
+Opción A - Docker (recomendado):
 
 ```bash
 cd backend_pasantia
-npm install
+docker-compose up -d
 ```
 
-**Configuración de Variables de Entorno (Backend):**
-Debes crear un archivo `.env` en la carpeta `backend_pasantia`:
-```bash
-# Dentro de backend_pasantia/
-echo "JWT_SECRET=super-secret-key-pasantia-2026" > .env
-echo "PORT=3001" >> .env
-```
-*(Asegúrate de cambiar el `JWT_SECRET` por uno más seguro en producción).*
+Esto levanta PostgreSQL 15 en el puerto configurado con las credenciales del `docker-compose.yml`.
 
-### 1.3. Instalar dependencias del Frontend y compilar
+Opción B - Instalación directa:
+Instala PostgreSQL 15 y crea la base de datos manualmente. Configura las credenciales en el archivo `.env` del backend según lo que espere `data-source.ts` de TypeORM.
 
-El frontend está desarrollado con Next.js y configurado para exportación estática (`output: 'export'`).
+### 1.4 Compilar e Iniciar
 
 ```bash
-cd ../front-pasantia
+cd backend_pasantia
+
+# Instalar dependencias
 npm install
 
-# Compilar el proyecto estático
-npm run build
-```
-Esto generará una carpeta llamada `out` dentro de `front-pasantia` que contiene los archivos estáticos listos para ser servidos por Nginx.
-
----
-
-## ⚙️ 2. Despliegue del Backend con PM2
-
-Para mantener el backend ejecutándose en segundo plano y que se reinicie automáticamente si falla o si el servidor se reinicia, usaremos PM2.
-
-```bash
-cd ../backend_pasantia
-
-# Compilar el backend
+# Compilar TypeScript
 npm run build
 
-# Iniciar el backend con PM2
+# Iniciar con PM2 (producción)
 pm2 start dist/main.js --name "backend-pasantia"
 
-# Guardar la lista de procesos para que PM2 los levante al reiniciar el servidor
-pm2 save
+# Ver logs
+pm2 logs backend-pasantia
 
-# Configurar PM2 para que inicie con el sistema operativo (sigue las instrucciones que te dé el comando)
+# Persistir y auto-inicio
+pm2 save
 pm2 startup
 ```
 
-Para verificar que el backend está corriendo:
-```bash
-pm2 status
-pm2 logs backend-pasantia
-```
+El backend corre en `http://localhost:3001`.
 
 ---
 
-## 🌐 3. Configuración de Nginx
+## 2. Frontend (Next.js + Electron)
 
-Nginx se encargará de dos cosas:
-1. Servir los archivos estáticos del Frontend (la carpeta `out`).
-2. Redirigir (Reverse Proxy) las peticiones de `/api` hacia nuestro Backend gestionado por PM2 (puerto 3001).
+### 2.1 Estructura
 
-### 3.1. Crear el archivo de configuración
+```
+front-pasantia/
+├── app/              # Páginas y rutas Next.js
+├── components/       # Componentes React
+├── lib/              # Utilidades
+├── public/           # Estáticos
+├── main.js           # Entry point de Electron
+├── out/              # Build estático (generado con npm run build)
+├── dist/             # Ejecutable Electron (generado con npm run package)
+└── .env              # Variable NEXT_PUBLIC_API_URL
+```
 
-Crea o edita un archivo de configuración en Nginx (dependiendo de tu SO, suele estar en `/etc/nginx/sites-available/pasantia` o `/etc/nginx/conf.d/pasantia.conf`).
+### 2.2 Variables de Entorno
+
+Archivo `front-pasantia/.env`:
+
+```env
+NEXT_PUBLIC_API_URL=http://10.200.17.185:3001
+```
+
+> **Importante:** Esta URL debe apuntar al servidor donde corre el backend. En producción, si usas Nginx como proxy reverso, debe ser la IP pública del servidor (ej: `http://192.168.1.100:3001`). En desarrollo local apunta a `localhost:3001`.
+
+### 2.3 Despliegue Web (Nginx + Static Export)
+
+```bash
+cd front-pasantia
+
+# Instalar dependencias
+npm install
+
+# Compilar exportación estática
+npm run build
+# Genera la carpeta out/ con HTML, CSS y JS estáticos
+```
+
+Configuración de Nginx (`/etc/nginx/sites-available/pasantia`):
 
 ```nginx
 server {
     listen 80;
-    server_name tu_dominio_o_ip; # Ej: 192.168.1.7 o pasantia.midominio.com
+    server_name tu_ip_o_dominio;
 
-    # 1. Servir el Frontend estático
     location / {
-        # Cambia esta ruta a la ubicación real de tu proyecto
-        root /ruta/absoluta/a/pasantia/front-pasantia/out; 
-        index index.html index.htm;
-        
-        # Necesario para que funcionen las rutas de Next.js
+        root /ruta/absoluta/a/front-pasantia/out;
+        index index.html;
         try_files $uri $uri.html $uri/ /index.html;
     }
 
-    # 2. Proxy inverso para el Backend (NestJS)
     location /api/ {
-        # El backend corre en el puerto 3001
-        proxy_pass http://127.0.0.1:3001/; 
-        
+        proxy_pass http://127.0.0.1:3001/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -133,22 +145,123 @@ server {
 }
 ```
 
-**Puntos clave del archivo Nginx:**
-- `root /ruta/absoluta/a/pasantia/front-pasantia/out;`: Asegúrate de colocar la ruta **absoluta** de tu servidor donde clonaste el repo.
-- `proxy_pass http://127.0.0.1:3001/;`: La barra final `/` es importante porque elimina el prefijo `/api` antes de pasarlo al backend (ej: `/api/auth/login` llega como `/auth/login` al backend).
+Habilitar y reiniciar:
 
-### 3.2. Habilitar el sitio y reiniciar Nginx
-
-Si estás en Ubuntu/Debian:
 ```bash
-# Crear un enlace simbólico para habilitar el sitio
 sudo ln -s /etc/nginx/sites-available/pasantia /etc/nginx/sites-enabled/
-
-# Verificar que la configuración sea correcta
 sudo nginx -t
-
-# Reiniciar Nginx
 sudo systemctl restart nginx
 ```
 
-¡Listo! Con esto tu proyecto ya debería estar accesible desde tu IP o dominio, mostrando el frontend con Next.js y comunicándose correctamente con tu backend de NestJS a través de `/api`.
+### 2.4 Despliegue Escritorio (Electron)
+
+#### Build del ejecutable
+
+```bash
+cd front-pasantia
+
+# Compilar el frontend
+npm run build
+
+# Empaquetar para Linux (.deb)
+npm run package
+
+# Empaquetar para Windows (.exe portable)
+npm run package:win
+```
+
+Los ejecutables se generan en:
+- Linux: `dist/FerroPases-1.0.0.deb`
+- Windows: `dist/FerroPases-1.0.0.exe`
+
+#### Modo desarrollo con Electron
+
+```bash
+# Terminal 1 - Servidor Next.js
+npm run dev
+
+# Terminal 2 - Ventana Electron (espera al puerto 3000)
+npm run electron:dev
+```
+
+#### Arquitectura de la app Electron
+
+El archivo `main.js` funciona así:
+
+- **Producción** (`app.isPackaged = true`):
+  - Carga los archivos estáticos desde `out/` usando `electron-serve`
+  - Desactiva el menú superior y el DevTools (Ctrl+Shift+I lo reactiva)
+- **Desarrollo** (`app.isPackaged = false`):
+  - Carga `http://localhost:3000` (Next.js dev server)
+  - Abre DevTools automáticamente
+
+> La aceleración por hardware está deshabilitada para evitar pantallas negras en Linux.
+
+---
+
+## 3. Flujo de Despliegue Completo (Nuevo Servidor)
+
+```bash
+# 1. Clonar repositorio
+git clone <URL_DEL_REPO> pasantia
+cd pasantia
+
+# 2. Backend
+cd backend_pasantia
+cp .env.example .env          # o crea el .env manualmente
+npm install
+docker-compose up -d           # levanta PostgreSQL
+npm run build
+pm2 start dist/main.js --name "backend-pasantia"
+pm2 save
+
+# 3. Frontend
+cd ../front-pasantia
+npm install
+npm run build
+# Configura Nginx con el archivo de ejemplo de arriba
+sudo systemctl restart nginx
+```
+
+---
+
+## 4. Comandos Útiles
+
+### PM2
+
+```bash
+pm2 status                    # Ver estado de todos los procesos
+pm2 logs backend-pasantia     # Ver logs del backend
+pm2 restart backend-pasantia  # Reiniciar
+pm2 stop backend-pasantia     # Detener
+pm2 delete backend-pasantia   # Eliminar del listado
+pm2 save                      # Guardar lista actual para reinicios
+pm2 startup                   # Generar script de auto-inicio
+```
+
+### Frontend
+
+```bash
+npm run dev                   # Servidor de desarrollo (con hot reload)
+npm run build                 # Compilar exportación estática
+npm run start                 # Servir out/ con serve (prueba local)
+npm run package               # Empaquetar Electron para Linux
+npm run package:win           # Empaquetar Electron para Windows
+```
+
+---
+
+## 5. Solución de Problemas
+
+| Problema | Causa | Solución |
+|---|---|---|
+| Backend no responde | Puerto ocupado | `pm2 logs backend-pasantia` o cambia `PORT` en `.env` |
+| Frontend en blanco | API URL incorrecta | Verifica `NEXT_PUBLIC_API_URL` en `.env` |
+| Nginx 502 Bad Gateway | Backend caído | `pm2 restart backend-pasantia` |
+| Error `EPERM` en node_modules | Permisos | Ejecuta como administrador o `npm cache clean --force && npm install` |
+| PostgreSQL no conecta | Docker caído | `docker ps` para verificar el contenedor |
+| Electron pantalla negra | Aceleración HW | Ya deshabilitada en `main.js`; si persiste, agrega `--disable-gpu` |
+
+
+
+© 2026 CVG Ferrominera Orinoco - Sistema de Gestión de Pases

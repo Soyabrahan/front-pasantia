@@ -56,7 +56,7 @@ export default function RegisterPage() {
               <Truck className="text-white h-8 w-8" />
             </div>
             <span className="font-bold text-xl tracking-tighter uppercase max-w-[200px] leading-tight text-white/90">
-              Pase para Materiales y Misceláneos
+              FERROPASES
             </span>
           </div>
 

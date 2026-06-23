@@ -14,8 +14,6 @@ export function ServerStatus({
   const [status, setStatus] = useState<
     "connected" | "disconnected" | "checking"
   >("checking");
-  const [lastChecked, setLastChecked] = useState<Date | null>(null);
-
   const checkConnection = async () => {
     setStatus("checking");
     try {
@@ -41,13 +39,12 @@ export function ServerStatus({
         setStatus("connected");
       }
     } finally {
-      setLastChecked(new Date());
     }
   };
 
   useEffect(() => {
     checkConnection();
-    const interval = setInterval(checkConnection, 30000);
+    const interval = setInterval(checkConnection, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -106,16 +103,6 @@ export function ServerStatus({
           </>
         )}
       </div>
-      {lastChecked && status !== "checking" && !hideText && (
-        <span className="text-[10px] text-white/40">
-          Última vez:{" "}
-          {lastChecked.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          })}
-        </span>
-      )}
     </div>
   );
 }

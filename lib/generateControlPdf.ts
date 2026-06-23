@@ -32,40 +32,36 @@ export const generateControlPdf = (
     // ========================
     // COLUMN WIDTHS
     // ========================
-    const colPct = [5, 10, 10, 12, 22, 12, 15, 14];
-    const colW = colPct.map((p) => TABLE_W * (p / 100));
+    const colW = [9.5, 19.4, 19.4, 19.1, 70.2, 24.7, 63.5, 39.2];
 
     // ========================
     // HEADER
     // ========================
     const drawHeader = () => {
-        doc.setLineWidth(0.5);
+        doc.setLineWidth(0.2);
         doc.rect(0, 0, PAGE_W, PAGE_H);
 
         // Logos
         try {
-            doc.addImage('/cvg.png', 'PNG', 15, 12, 22, 18);
+            doc.addImage('/cvg.png', 'PNG', 15, 2, 30.9, 29.6);
         } catch (_) {}
 
         try {
             doc.addImage(
                 '/Logo_Ferrominera_Orinoco.jpg',
                 'JPEG',
-                PAGE_W - 15 - 20,
-                12,
-                20,
-                18
+                PAGE_W - 15 - 30.9,
+                2,
+                30.9,
+                29.6
             );
         } catch (_) {}
 
         // Title in one line - Helvetica bold 14pt, centered
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
-        doc.text(TITLE, PAGE_W / 2, 21, { align: 'center' });
+        doc.text(TITLE, PAGE_W / 2, 26, { align: 'center' });
 
-        // Header separator line
-        doc.setLineWidth(0.4);
-        doc.line(MARGIN, 33, PAGE_W - MARGIN, 33);
     };
 
     drawHeader();
@@ -119,21 +115,23 @@ export const generateControlPdf = (
         head: [[
             'Nº',
             'FECHA',
-            'Nº DE\nPASE',
+            'Nº DE PASE',
             'N.º / S',
-            'ENTREGADO\nA:',
+            'ENTREGADO A:',
             'EXT',
-            'USUARIOS\n/ FICHA',
-            'VEHICULO\nFMO/PARTIC./\nLLEVADO POR',
+            'USUARIOS / FICHA',
+            'VEHICULO FMO/PARTIC./\nLLEVADO POR',
         ]],
         body,
-        startY: 32,
+        startY: 35,
+        theme: 'grid',
         margin: { left: MARGIN, right: MARGIN },
         tableWidth: TABLE_W,
         styles: {
             font: 'helvetica',
+            fontStyle: 'bold',
             fontSize: 11,
-            lineWidth: 0.4,
+            lineWidth: 0.15,
             lineColor: [0, 0, 0],
             textColor: [0, 0, 0],
             cellPadding: 1.5,
@@ -141,9 +139,9 @@ export const generateControlPdf = (
         },
         headStyles: {
             halign: 'center',
-            fontStyle: 'bold',
+            fontSize: 10,
             fillColor: false,
-            lineWidth: 0.4,
+            lineWidth: 0.15,
             lineColor: [0, 0, 0],
             textColor: [0, 0, 0],
         },
@@ -154,7 +152,7 @@ export const generateControlPdf = (
         columnStyles: {
             0: { cellWidth: colW[0], halign: 'center' },
             1: { cellWidth: colW[1], halign: 'center' },
-            2: { cellWidth: colW[2], halign: 'center', fontStyle: 'bold' },
+            2: { cellWidth: colW[2], halign: 'center' },
             3: { cellWidth: colW[3], halign: 'center' },
             4: { cellWidth: colW[4], halign: 'left' },
             5: { cellWidth: colW[5], halign: 'center' },
@@ -162,36 +160,50 @@ export const generateControlPdf = (
             7: { cellWidth: colW[7], halign: 'left' },
         },
         didParseCell(data) {
-            // Yellow highlight only on body rows for Nº DE PASE column
             if (data.column.index === 2 && data.section === 'body') {
-                data.cell.styles.fillColor = [255, 242, 204];
+                data.cell.styles.fillColor = false;
+            }
+        },
+        willDrawCell(data) {
+            if (data.column.index === 2 && data.section === 'body') {
+                const c = data.cell;
+                const doc = data.doc;
+                const text = String(c.raw || '');
+                if (!text) return;
+                const pad = c.padding('left');
+                const fontSize = c.styles.fontSize || 11;
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(fontSize);
+                const textW = doc.getTextWidth(text);
+                const textH = fontSize * 0.3528;
+                const cx = c.x + c.width / 2;
+                const cy = c.y + c.height / 2;
+                doc.setFillColor(255, 255, 0);
+                doc.rect(cx - textW / 2 - 1.5, cy - textH / 2 - 0.5, textW + 3, textH + 1.5, 'F');
             }
         },
         willDrawPage(data) {
             if (data.pageNumber > 1) {
-                doc.setLineWidth(0.5);
+                doc.setLineWidth(0.2);
                 doc.rect(0, 0, PAGE_W, PAGE_H);
 
                 try {
-                    doc.addImage('/cvg.png', 'PNG', 15, 12, 22, 18);
+                    doc.addImage('/cvg.png', 'PNG', 15, 2, 30.9, 29.6);
                 } catch (_) {}
                 try {
                     doc.addImage(
                         '/Logo_Ferrominera_Orinoco.jpg',
                         'JPEG',
-                        PAGE_W - 15 - 20,
-                        12,
-                        20,
-                        18
+                        PAGE_W - 15 - 30.9,
+                        2,
+                        30.9,
+                        29.6
                     );
                 } catch (_) {}
 
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(14);
-                doc.text(TITLE, PAGE_W / 2, 21, { align: 'center' });
-
-                doc.setLineWidth(0.4);
-                doc.line(MARGIN, 33, PAGE_W - MARGIN, 33);
+                doc.text(TITLE, PAGE_W / 2, 26, { align: 'center' });
             }
         },
         showHead: 'everyPage',

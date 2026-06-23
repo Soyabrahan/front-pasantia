@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
 import { DashboardStatsSkeleton } from "@/components/dashboard/dashboard-stats-skeleton";
 import { PasesByDestinoChart } from "@/components/dashboard/pases-by-destino-chart";
+import { PasesPieChart } from "@/components/dashboard/pases-pie-chart";
 import { api } from "@/lib/api-client";
 import {
   Select,
@@ -100,6 +101,26 @@ function getPasesByMonth(pases: any[], year: number): ChartDataItem[] {
   return items;
 }
 
+function getPasesByDestinoOverall(pases: any[]): ChartDataItem[] {
+  const grouped: Record<string, number> = {};
+  pases.forEach((p) => {
+    if (!p.fecha_emision) return;
+    const name = p.destino?.nombre || "SIN DESTINO";
+    grouped[name] = (grouped[name] || 0) + 1;
+  });
+
+  const items = Object.entries(grouped)
+    .map(([name, cantidad]) => ({ name, cantidad, isTotal: false }))
+    .sort((a, b) => b.cantidad - a.cantidad);
+
+  const total = items.reduce((sum, item) => sum + item.cantidad, 0);
+  if (items.length > 0) {
+    items.push({ name: "TOTAL", cantidad: total, isTotal: true });
+  }
+
+  return items;
+}
+
 function getOverallStats(pases: any[]) {
   const totalPases = pases.length;
   const today = new Date().toISOString().split("T")[0];
@@ -117,7 +138,7 @@ function getOverallStats(pases: any[]) {
 export default function DashboardPage() {
   const [pases, setPases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(String(currentYear));
+  const [selectedMonth, setSelectedMonth] = useState("0");
   const [selectedYear, setSelectedYear] = useState(String(currentYear));
 
   const isAnnual = selectedMonth === "0";
@@ -145,6 +166,18 @@ export default function DashboardPage() {
     return getPasesByDestino(pases, Number(selectedMonth), year);
   }, [pases, selectedMonth, selectedYear, isAnnual]);
 
+  const overallDestinoData = useMemo(() => getPasesByDestinoOverall(pases), [pases]);
+
+  const overallDestinoPieData = useMemo(
+    () => overallDestinoData.filter((d) => !d.isTotal),
+    [overallDestinoData]
+  );
+
+  const monthlyDestinoPieData = useMemo(
+    () => (isAnnual ? [] : chartData.filter((d) => !d.isTotal)),
+    [chartData, isAnnual]
+  );
+
   const stats = useMemo(() => getOverallStats(pases), [pases]);
 
   const selectedMonthLabel = isAnnual
@@ -152,7 +185,7 @@ export default function DashboardPage() {
     : MONTHS.find((m) => m.value === selectedMonth)?.label || "";
 
   const chartLabel = isAnnual
-    ? `Pases por mes - AÑO ${selectedYear}`
+    ? `Métrica de pases por mes - AÑO ${selectedYear}`
     : `Pases por destino - ${selectedMonthLabel} ${selectedYear}`;
 
   return (
@@ -173,7 +206,7 @@ export default function DashboardPage() {
         <Card className="animate-in slide-in-from-bottom-4 duration-700 delay-100 fill-mode-both border-border/40 bg-card shadow-sm">
           <CardHeader className="pb-3 border-b border-border/20 bg-muted/30 flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-black flex items-center gap-2 text-foreground uppercase tracking-tight">
-              Pases por Destino
+              Métrica de Pases
             </CardTitle>
 
             <div className="flex items-center gap-3">
@@ -216,10 +249,63 @@ export default function DashboardPage() {
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
               </div>
             ) : (
-              <PasesByDestinoChart data={chartData} label={chartLabel} />
+              <PasesByDestinoChart
+                data={chartData}
+                label={chartLabel}
+                variant={isAnnual ? "month" : "destino"}
+              />
             )}
           </CardContent>
         </Card>
+
+        {!loading && isAnnual && (
+          <>
+            <Card className="animate-in slide-in-from-bottom-4 duration-700 delay-200 fill-mode-both border-border/40 bg-card shadow-sm">
+              <CardHeader className="pb-3 border-b border-border/20 bg-muted/30">
+                <CardTitle className="text-lg font-black flex items-center gap-2 text-foreground uppercase tracking-tight">
+                  Total de Pases por Destino
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <PasesByDestinoChart
+                  data={overallDestinoData}
+                  label={`Total de pases por destino - AÑO ${selectedYear}`}
+                  variant="destino"
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="animate-in slide-in-from-bottom-4 duration-700 delay-300 fill-mode-both border-border/40 bg-card shadow-sm">
+              <CardHeader className="pb-3 border-b border-border/20 bg-muted/30">
+                <CardTitle className="text-lg font-black flex items-center gap-2 text-foreground uppercase tracking-tight">
+                  Distribución de Pases por Destino
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <PasesPieChart
+                  data={overallDestinoPieData}
+                  label={`Distribución de pases por destino - AÑO ${selectedYear}`}
+                />
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {!loading && !isAnnual && (
+          <Card className="animate-in slide-in-from-bottom-4 duration-700 delay-200 fill-mode-both border-border/40 bg-card shadow-sm">
+            <CardHeader className="pb-3 border-b border-border/20 bg-muted/30">
+              <CardTitle className="text-lg font-black flex items-center gap-2 text-foreground uppercase tracking-tight">
+                Distribución de Pases por Destino
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <PasesPieChart
+                data={monthlyDestinoPieData}
+                label={`Distribución de pases por destino - ${selectedMonthLabel} ${selectedYear}`}
+              />
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   );

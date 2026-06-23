@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { ShieldCheck, Calendar as CalendarIcon, User, Search, Clock } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { ShieldCheck, Calendar as CalendarIcon, User, Search, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { Header } from "@/components/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -12,6 +12,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -28,13 +29,49 @@ interface AuditLog {
     fechaHora: string;
 }
 
+interface PaginatedResponse {
+    data: AuditLog[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+const ITEMS_PER_PAGE = 15;
+
 export default function AuditoriaPage() {
     const router = useRouter();
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [total, setTotal] = useState(0);
+
+    const fetchLogs = useCallback(async (pageNum: number) => {
+        setLoading(true);
+        try {
+            const data = await api.get<PaginatedResponse>("/auditoria", {
+                page: pageNum.toString(),
+                limit: ITEMS_PER_PAGE.toString(),
+            });
+            setLogs(data.data);
+            setTotalPages(data.totalPages);
+            setTotal(data.total);
+        } catch (e) {
+            console.error("Error fetching audit logs", e);
+            if (isNetworkError(e)) {
+                toast.error("No hay conexión con el servidor. Redirigiendo al login...");
+                localStorage.removeItem("auth_token");
+                router.push("/login");
+                return;
+            }
+            toast.error("Error al cargar los registros de auditoría");
+        } finally {
+            setLoading(false);
+        }
+    }, [router]);
 
     useEffect(() => {
-        // Verificar token y rol
         const token = getToken();
         if (!token) {
             router.push("/login");
@@ -55,27 +92,13 @@ export default function AuditoriaPage() {
             return;
         }
 
-        // Fetch logs
-        const fetchLogs = async () => {
-            try {
-                const data = await api.get<AuditLog[]>("/auditoria");
-                setLogs(data);
-            } catch (e) {
-                console.error("Error fetching audit logs", e);
-                if (isNetworkError(e)) {
-                    toast.error("No hay conexión con el servidor. Redirigiendo al login...");
-                    localStorage.removeItem("auth_token");
-                    router.push("/login");
-                    return;
-                }
-                toast.error("Error al cargar los registros de auditoría");
-            } finally {
-                setLoading(false);
-            }
-        };
+        fetchLogs(page);
+    }, [page, router, fetchLogs]);
 
-        fetchLogs();
-    }, [router]);
+    const goToPage = (p: number) => {
+        if (p < 1 || p > totalPages) return;
+        setPage(p);
+    };
 
     return (
         <div className="min-h-screen bg-background pb-10">
@@ -91,6 +114,9 @@ export default function AuditoriaPage() {
                         <CardTitle className="text-lg font-black flex items-center gap-2 text-foreground uppercase tracking-tight">
                             <Clock className="h-4 w-4 text-primary" />
                             Últimas Acciones Registradas
+                            <span className="text-sm font-normal text-muted-foreground lowercase ml-auto">
+                                {total} registro{total !== 1 ? 's' : ''}
+                            </span>
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -156,6 +182,44 @@ export default function AuditoriaPage() {
                                 )}
                             </TableBody>
                         </Table>
+
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-center gap-2 py-4 border-t border-border/20">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    disabled={page <= 1}
+                                    onClick={() => goToPage(page - 1)}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                    .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+                                    .map((p, idx, arr) => (
+                                        <React.Fragment key={p}>
+                                            {idx > 0 && arr[idx - 1] !== p - 1 && (
+                                                <span className="text-muted-foreground px-1">...</span>
+                                            )}
+                                            <Button
+                                                variant={p === page ? "default" : "outline"}
+                                                size="sm"
+                                                className="min-w-[36px]"
+                                                onClick={() => goToPage(p)}
+                                            >
+                                                {p}
+                                            </Button>
+                                        </React.Fragment>
+                                    ))}
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    disabled={page >= totalPages}
+                                    onClick={() => goToPage(page + 1)}
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </main>

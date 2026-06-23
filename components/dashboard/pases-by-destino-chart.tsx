@@ -24,6 +24,7 @@ interface ChartDataItem {
 interface PasesByDestinoChartProps {
   data: ChartDataItem[];
   label: string;
+  variant?: "month" | "destino";
 }
 
 const chartConfig = {
@@ -32,12 +33,57 @@ const chartConfig = {
   },
 };
 
-function getBarColor(index: number, isTotal: boolean): string {
-  if (isTotal) return "#8B1C23";
-  return "#CC1414";
+const VINOTINTO = "#8B1C23";
+
+const MONTH_COLORS = [
+  "#2563EB",
+  "#7C3AED",
+  "#059669",
+  "#D97706",
+  "#DC2626",
+  "#0891B2",
+  "#DB2777",
+  "#65A30D",
+  "#EA580C",
+  "#4F46E5",
+  "#0D9488",
+  "#CA8A04",
+];
+
+const DESTINO_COLORS = [
+  "#2563EB",
+  "#7C3AED",
+  "#059669",
+  "#D97706",
+  "#DC2626",
+  "#0891B2",
+  "#DB2777",
+  "#65A30D",
+  "#EA580C",
+  "#4F46E5",
+  "#0D9488",
+  "#CA8A04",
+  "#6366F1",
+  "#EC4899",
+  "#14B8A6",
+  "#F97316",
+  "#84CC16",
+  "#06B6D4",
+  "#A855F7",
+  "#EF4444",
+  "#22C55E",
+  "#EAB308",
+];
+
+function getBarColor(index: number, isTotal: boolean, variant: "month" | "destino"): string {
+  if (isTotal) return VINOTINTO;
+  if (variant === "month") {
+    return MONTH_COLORS[index % MONTH_COLORS.length];
+  }
+  return DESTINO_COLORS[index % DESTINO_COLORS.length];
 }
 
-export function PasesByDestinoChart({ data, label }: PasesByDestinoChartProps) {
+export function PasesByDestinoChart({ data, label, variant = "destino" }: PasesByDestinoChartProps) {
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-[350px] text-muted-foreground text-sm">
@@ -97,7 +143,7 @@ export function PasesByDestinoChart({ data, label }: PasesByDestinoChartProps) {
             maxBarSize={48}
           >
             {data.map((entry, index) => (
-              <Cell key={entry.name} fill={getBarColor(index, entry.isTotal)} />
+              <Cell key={entry.name} fill={getBarColor(index, entry.isTotal, variant)} />
             ))}
           </Bar>
         </BarChart>

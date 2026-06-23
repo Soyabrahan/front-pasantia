@@ -56,7 +56,7 @@ export default function LoginPage() {
               <Truck className="h-10 w-10 text-[#CC1414]" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-2xl font-black tracking-tighter text-white uppercase">FMO</h1>
+              <h1 className="text-2xl font-black tracking-tighter text-white uppercase">FERROPASES</h1>
               <p className="text-white/80 text-xs font-bold uppercase tracking-[0.2em]">Sistema de Gestión de Pases</p>
             </div>
           </div>
@@ -165,7 +165,8 @@ export default function LoginPage() {
             </div>
           </div>
           <p className="text-[9px] text-white font-medium uppercase tracking-[0.3em]">
-            © 2026 FMO - Gestión de Materiales y Misceláneos
+            © 2026 FMO - Gestión de Materiales y Misceláneos.
+            Realizado por: Abrahan Ramírez.
           </p>
         </div>
       </div>
