@@ -4,6 +4,19 @@ import React, { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function getApiBaseUrl() {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (envUrl) {
+    return envUrl;
+  }
+
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:3001`;
+  }
+
+  return "http://127.0.0.1:3001";
+}
+
 export function ServerStatus({
   className,
   hideText = false,
@@ -21,9 +34,7 @@ export function ServerStatus({
     try {
       // Usamos fetch directamente para evitar el parseo de JSON
       // El modo no-cors permite detectar si hay respuesta aunque no se pueda leer
-      await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://10.200.23.71:3001"}/`,
-        {
+      await fetch(`${getApiBaseUrl()}/`, {
           method: "GET",
           mode: "no-cors",
           cache: "no-cache",

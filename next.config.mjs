@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const isDev = process.env.NODE_ENV === "development";
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:3001";
 
 const nextConfig = {
   // Solo usar 'export' en producción para permitir 'rewrites' en desarrollo
@@ -15,7 +16,13 @@ const nextConfig = {
     optimizePackageImports: ["lucide-react"],
     viewTransition: true,
     // Permitir acceso desde la IP del servidor de Ferrominera
-    allowedDevOrigins: ["10.200.23.71", "localhost:3000"],
+    allowedDevOrigins: [
+      "10.200.23.71",
+      "localhost:3000",
+      "127.0.0.1:3000",
+      "172.16.1.185:3000",
+      "172.16.1.185",
+    ],
   },
   // Configurar proxy inverso en desarrollo para reemplazar Nginx
   ...(isDev
@@ -24,7 +31,7 @@ const nextConfig = {
           return [
             {
               source: "/api/:path*",
-              destination: `${process.env.NEXT_PUBLIC_API_URL || "http://10.200.23.71:3001"}/:path*`,
+              destination: `${apiBaseUrl}/:path*`,
             },
           ];
         },

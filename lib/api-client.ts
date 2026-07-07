@@ -1,6 +1,18 @@
-// Usamos la IP directa del backend para que funcione sin Nginx (necesario para .exe/.deb)
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://10.200.23.71:3001";
+function getApiBaseUrl() {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (envUrl) {
+    return envUrl;
+  }
+
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:3001`;
+  }
+
+  return "http://127.0.0.1:3001";
+}
+
+// Usamos la URL del backend desde el entorno o, si no existe, la derivamos desde el host actual.
+const API_BASE_URL = getApiBaseUrl();
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string>;

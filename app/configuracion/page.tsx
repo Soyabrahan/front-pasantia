@@ -23,7 +23,8 @@ import {
     UserCheck,
     Hash,
     Eye,
-    EyeOff
+    EyeOff,
+    Building2
 } from "lucide-react"
 import {
     DropdownMenu,
@@ -117,6 +118,13 @@ export default function ConfigurationPage() {
     const [editDestino, setEditDestino] = useState<any>(null)
     const [editingEmpleadoId, setEditingEmpleadoId] = useState<number | null>(null)
     const [editEmpleado, setEditEmpleado] = useState<any>(null)
+    const [isCustomDeptNew, setIsCustomDeptNew] = useState(false)
+    const [isCustomDeptEdit, setIsCustomDeptEdit] = useState(false)
+    const [departamentos, setDepartamentos] = useState<any[]>([])
+    const [isAddingDepartamento, setIsAddingDepartamento] = useState(false)
+    const [newDepartamento, setNewDepartamento] = useState({ nombre: "" })
+    const [editingDepartamentoId, setEditingDepartamentoId] = useState<number | null>(null)
+    const [editDepartamento, setEditDepartamento] = useState<any>(null)
 
     // Estados para Cambio de Contraseña
     const [isPassModalOpen, setIsPassModalOpen] = useState(false)
@@ -128,16 +136,18 @@ export default function ConfigurationPage() {
     const fetchAll = async () => {
         setLoading(true)
         try {
-            const [u, v, d, e] = await Promise.all([
+            const [u, v, d, e, dept] = await Promise.all([
                 api.get<any[]>("/usuarios/all").catch(() => []), 
                 api.get<any[]>("/vehiculos"),
                 api.get<any[]>("/destinos"),
                 api.get<any[]>("/empleados").catch(() => []),
+                api.get<any[]>("/departamentos").catch(() => []),
             ])
             setUsuarios(u)
             setVehiculos(v)
             setDestinos(d)
             setEmpleados(e)
+            setDepartamentos(dept)
         } catch (error) {
             console.error("Error loading config data:", error)
         } finally {
@@ -269,9 +279,16 @@ export default function ConfigurationPage() {
 
     const handleSaveEmpleado = async () => {
         try {
-            const saved = await api.post<any>("/empleados", newEmpleado)
-            setEmpleados([...empleados, saved])
+            let depto = newEmpleado.departamento;
+            const deptoExistente = departamentos.find(d => d.nombre === depto);
+            if (!deptoExistente && depto) {
+                const savedDepto = await api.post<any>("/departamentos", { nombre: depto });
+                setDepartamentos(prev => [...prev, savedDepto]);
+            }
+            const saved = await api.post<any>("/empleados", { ...newEmpleado, departamento: depto })
+            setEmpleados(prev => [...prev, saved])
             setIsAddingEmpleado(false)
+            setIsCustomDeptNew(false)
             setNewEmpleado({ ficha: "", nombre: "", departamento: "", cargo: "" })
         } catch (error) {
             alert("Error al guardar empleado")
@@ -321,9 +338,16 @@ export default function ConfigurationPage() {
 
     const handleUpdateEmpleado = async (id: number) => {
         try {
-            const updated = await api.patch<any>(`/empleados/${id}`, editEmpleado)
-            setEmpleados(empleados.map(e => e.id === id ? updated : e))
+            let depto = editEmpleado.departamento;
+            const deptoExistente = departamentos.find(d => d.nombre === depto);
+            if (!deptoExistente && depto) {
+                const savedDepto = await api.post<any>("/departamentos", { nombre: depto });
+                setDepartamentos(prev => [...prev, savedDepto]);
+            }
+            const updated = await api.patch<any>(`/empleados/${id}`, { ...editEmpleado, departamento: depto })
+            setEmpleados(prev => prev.map(e => e.id === id ? updated : e))
             setEditingEmpleadoId(null)
+            setIsCustomDeptEdit(false)
         } catch (error) {
             alert("Error al actualizar empleado")
         }
@@ -353,9 +377,40 @@ export default function ConfigurationPage() {
         if (!confirm("¿Borrar empleado?")) return
         try {
             await api.delete(`/empleados/${id}`)
-            setEmpleados(empleados.filter(e => e.id !== id))
+            setEmpleados(prev => prev.filter(e => e.id !== id))
         } catch (error) {
             alert("Error al borrar")
+        }
+    }
+
+    const handleSaveDepartamento = async () => {
+        try {
+            const saved = await api.post<any>("/departamentos", newDepartamento)
+            setDepartamentos([...departamentos, saved])
+            setIsAddingDepartamento(false)
+            setNewDepartamento({ nombre: "" })
+        } catch (error) {
+            alert("Error al guardar departamento")
+        }
+    }
+
+    const handleUpdateDepartamento = async (id: number) => {
+        try {
+            const updated = await api.patch<any>(`/departamentos/${id}`, editDepartamento)
+            setDepartamentos(departamentos.map(d => d.id === id ? updated : d))
+            setEditingDepartamentoId(null)
+        } catch (error) {
+            alert("Error al actualizar departamento")
+        }
+    }
+
+    const handleDeleteDepartamento = async (id: number) => {
+        if (!confirm("¿Borrar departamento?")) return
+        try {
+            await api.delete(`/departamentos/${id}`)
+            setDepartamentos(departamentos.filter(d => d.id !== id))
+        } catch (error) {
+            alert("Error al borrar departamento")
         }
     }
 
@@ -391,14 +446,12 @@ export default function ConfigurationPage() {
 
     const handleAssignRoleToEmpleado = async (empleado: any, role: string) => {
         try {
-            // Actualizar rol en el empleado
             await api.patch(`/empleados/${empleado.id}`, { rol: role });
-            setEmpleados(empleados.map(e => e.id === empleado.id ? { ...e, rol: role } : e));
-            
-            alert(`Rol ${role} asignado correctamente a ${empleado.nombre}`);
+            setEmpleados(prev => prev.map(e => e.id === empleado.id ? { ...e, rol: role } : e));
+            toast.success(`Rol ${role} asignado correctamente a ${empleado.nombre}`);
         } catch (error) {
             console.error("Error al asignar rol:", error);
-            alert("Error al procesar la asignación de rol");
+            toast.error("Error al procesar la asignación de rol");
         }
     }
 
@@ -460,7 +513,7 @@ export default function ConfigurationPage() {
             <main className="p-6 space-y-6 max-w-6xl mx-auto animate-fadeIn">
 
                 <Tabs defaultValue="usuarios" className="w-full" onValueChange={setActiveTab}>
-                    <TabsList className="grid w-full grid-cols-5 md:w-[650px] mb-4">
+                    <TabsList className="grid w-full grid-cols-6 md:w-[780px] mb-4">
                         <TabsTrigger value="usuarios" className="flex gap-2 text-xs md:text-sm">
                             <UsersIcon className="h-4 w-4" />
                             Usuarios
@@ -476,6 +529,10 @@ export default function ConfigurationPage() {
                         <TabsTrigger value="empleados" className="flex gap-2 text-xs md:text-sm">
                             <User className="h-4 w-4" />
                             Empleados
+                        </TabsTrigger>
+                        <TabsTrigger value="departamentos" className="flex gap-2 text-xs md:text-sm">
+                            <Building2 className="h-4 w-4" />
+                            Departamentos
                         </TabsTrigger>
                         <TabsTrigger value="ajustes" className="flex gap-2 text-xs md:text-sm">
                             <Settings2 className="h-4 w-4" />
@@ -1073,13 +1130,44 @@ export default function ConfigurationPage() {
                                                     <TableCell><Input placeholder="Ficha" className="h-8" value={newEmpleado.ficha} onChange={e => setNewEmpleado({...newEmpleado, ficha: e.target.value})} /></TableCell>
                                                     <TableCell><Input placeholder="Nombre" className="h-8" value={newEmpleado.nombre} onChange={e => setNewEmpleado({...newEmpleado, nombre: e.target.value})} /></TableCell>
                                                     <TableCell><Input placeholder="Cargo" className="h-8" value={newEmpleado.cargo} onChange={e => setNewEmpleado({...newEmpleado, cargo: e.target.value})} /></TableCell>
-                                                    <TableCell><Input placeholder="Departamento" className="h-8" value={newEmpleado.departamento} onChange={e => setNewEmpleado({...newEmpleado, departamento: e.target.value})} /></TableCell>
+                                                    <TableCell>
+                                                            {isCustomDeptNew ? (
+                                                                <Input
+                                                                    placeholder="Nuevo departamento"
+                                                                    className="h-8"
+                                                                    value={newEmpleado.departamento}
+                                                                    onChange={e => setNewEmpleado({...newEmpleado, departamento: e.target.value})}
+                                                                />
+                                                            ) : (
+                                                                <Select
+                                                                    value={newEmpleado.departamento || "placeholder"}
+                                                                    onValueChange={(val) => {
+                                                                        if (val === "___otro___") {
+                                                                            setIsCustomDeptNew(true);
+                                                                            setNewEmpleado({...newEmpleado, departamento: ""});
+                                                                        } else {
+                                                                            setNewEmpleado({...newEmpleado, departamento: val});
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <SelectTrigger className="h-8 w-full">
+                                                                        <SelectValue placeholder="Seleccionar departamento" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {departamentos.map(d => (
+                                                                            <SelectItem key={d.id} value={d.nombre}>{d.nombre}</SelectItem>
+                                                                        ))}
+                                                                        <SelectItem value="___otro___">Otro...</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            )}
+                                                        </TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex justify-end gap-2">
                                                             <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={handleSaveEmpleado}>
                                                                 <Save className="h-4 w-4" />
                                                             </Button>
-                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => setIsAddingEmpleado(false)}>
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => { setIsAddingEmpleado(false); setIsCustomDeptNew(false); }}>
                                                                 <X className="h-4 w-4" />
                                                             </Button>
                                                         </div>
@@ -1097,11 +1185,42 @@ export default function ConfigurationPage() {
                                                             <TableCell><Input className="h-8" value={editEmpleado.ficha} onChange={e => setEditEmpleado({...editEmpleado, ficha: e.target.value})} /></TableCell>
                                                             <TableCell><Input className="h-8" value={editEmpleado.nombre} onChange={e => setEditEmpleado({...editEmpleado, nombre: e.target.value})} /></TableCell>
                                                             <TableCell><Input className="h-8" value={editEmpleado.cargo} onChange={e => setEditEmpleado({...editEmpleado, cargo: e.target.value})} /></TableCell>
-                                                            <TableCell><Input className="h-8" value={editEmpleado.departamento} onChange={e => setEditEmpleado({...editEmpleado, departamento: e.target.value})} /></TableCell>
+                                                            <TableCell>
+                                                                {isCustomDeptEdit ? (
+                                                                    <Input
+                                                                        placeholder="Nuevo departamento"
+                                                                        className="h-8"
+                                                                        value={editEmpleado.departamento}
+                                                                        onChange={e => setEditEmpleado({...editEmpleado, departamento: e.target.value})}
+                                                                    />
+                                                                ) : (
+                                                                    <Select
+                                                                        value={editEmpleado.departamento || "placeholder"}
+                                                                        onValueChange={(val) => {
+                                                                            if (val === "___otro___") {
+                                                                                setIsCustomDeptEdit(true);
+                                                                                setEditEmpleado({...editEmpleado, departamento: ""});
+                                                                            } else {
+                                                                                setEditEmpleado({...editEmpleado, departamento: val});
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <SelectTrigger className="h-8 w-full">
+                                                                            <SelectValue placeholder="Seleccionar departamento" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {departamentos.map(d => (
+                                                                                <SelectItem key={d.id} value={d.nombre}>{d.nombre}</SelectItem>
+                                                                            ))}
+                                                                            <SelectItem value="___otro___">Otro...</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                )}
+                                                            </TableCell>
                                                             <TableCell colSpan={2} className="text-right">
                                                                 <div className="flex justify-end gap-2">
                                                                     <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => handleUpdateEmpleado(e.id)}><Save className="h-4 w-4" /></Button>
-                                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => setEditingEmpleadoId(null)}><X className="h-4 w-4" /></Button>
+                                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => { setEditingEmpleadoId(null); setIsCustomDeptEdit(false); }}><X className="h-4 w-4" /></Button>
                                                                 </div>
                                                             </TableCell>
                                                         </>
@@ -1109,8 +1228,8 @@ export default function ConfigurationPage() {
                                                         <>
                                                             <TableCell className="font-mono">{e.ficha}</TableCell>
                                                             <TableCell className="font-medium">{e.nombre}</TableCell>
-                                                            <TableCell>{e.cargo}</TableCell>
-                                                            <TableCell>{e.departamento}</TableCell>
+                                                            <TableCell>{e.cargo?.nombre || e.cargo}</TableCell>
+                                                            <TableCell>{e.departamento?.nombre || e.departamento}</TableCell>
                                                             <TableCell>
                                                                 <Select 
                                                                     value={e.rol || "Ninguno"} 
@@ -1133,7 +1252,7 @@ export default function ConfigurationPage() {
                                                                         <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
                                                                     </DropdownMenuTrigger>
                                                                     <DropdownMenuContent align="end">
-                                                                        <DropdownMenuItem onClick={() => { setEditingEmpleadoId(e.id); setEditEmpleado({...e}); }}>
+                                                                        <DropdownMenuItem onClick={() => { setEditingEmpleadoId(e.id); setEditEmpleado({...e}); setIsCustomDeptEdit(!!(e.departamento && !departamentos.some(d => d.nombre === e.departamento))); }}>
                                                                             <Edit className="h-4 w-4 mr-2" /> Editar
                                                                         </DropdownMenuItem>
                                                                         {isAdmin && (
@@ -1141,6 +1260,115 @@ export default function ConfigurationPage() {
                                                                                 <Trash2 className="h-4 w-4 mr-2" /> Eliminar
                                                                             </DropdownMenuItem>
                                                                         )}
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </TableCell>
+                                                        </>
+                                                    )}
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* DEPARTAMENTOS TAB */}
+                    <TabsContent value="departamentos">
+                        <Card className="border-slate-200 shadow-sm animate-in fade-in zoom-in-95 duration-500">
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                <div className="space-y-1">
+                                    <CardTitle>Departamentos</CardTitle>
+                                    <CardDescription>
+                                        Departamentos de la organización para asignar a empleados.
+                                    </CardDescription>
+                                </div>
+                                <Button 
+                                    size="sm" 
+                                    className="gap-2"
+                                    onClick={() => setIsAddingDepartamento(true)}
+                                    disabled={isAddingDepartamento}
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    Nuevo Departamento
+                                </Button>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="rounded-md border border-slate-200 overflow-hidden">
+                                    <Table>
+                                        <TableHeader className="bg-muted/50">
+                                            <TableRow>
+                                                <TableHead>Nombre del Departamento</TableHead>
+                                                <TableHead className="text-right">Acciones</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {isAddingDepartamento && (
+                                                <TableRow className="bg-primary/5">
+                                                    <TableCell>
+                                                        <Input 
+                                                            placeholder="Nombre del departamento" 
+                                                            className="h-8"
+                                                            value={newDepartamento.nombre}
+                                                            onChange={e => setNewDepartamento({...newDepartamento, nombre: e.target.value})}
+                                                            onKeyDown={e => { if (e.key === "Enter") handleSaveDepartamento() }}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={handleSaveDepartamento} disabled={!newDepartamento.nombre.trim()}>
+                                                                <Save className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => setIsAddingDepartamento(false)}>
+                                                                <X className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                            {loading ? (
+                                                <TableRow><TableCell colSpan={2} className="text-center">Cargando departamentos...</TableCell></TableRow>
+                                            ) : departamentos.length === 0 ? (
+                                                <TableRow><TableCell colSpan={2} className="text-center">No hay departamentos registrados.</TableCell></TableRow>
+                                            ) : departamentos.map((d) => (
+                                                <TableRow key={d.id} className="hover:bg-muted/30 transition-colors">
+                                                    {editingDepartamentoId === d.id ? (
+                                                        <>
+                                                            <TableCell>
+                                                                <Input 
+                                                                    className="h-8"
+                                                                    value={editDepartamento.nombre}
+                                                                    onChange={e => setEditDepartamento({...editDepartamento, nombre: e.target.value})}
+                                                                    onKeyDown={e => { if (e.key === "Enter") handleUpdateDepartamento(d.id) }}
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex justify-end gap-2">
+                                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => handleUpdateDepartamento(d.id)}>
+                                                                        <Save className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => setEditingDepartamentoId(null)}>
+                                                                        <X className="h-4 w-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            </TableCell>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <TableCell className="font-semibold">{d.nombre}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end">
+                                                                        <DropdownMenuItem onClick={() => { setEditingDepartamentoId(d.id); setEditDepartamento({...d}); }}>
+                                                                            <Edit className="h-4 w-4 mr-2" /> Editar
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteDepartamento(d.id)}>
+                                                                            <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                                                                        </DropdownMenuItem>
                                                                     </DropdownMenuContent>
                                                                 </DropdownMenu>
                                                             </TableCell>

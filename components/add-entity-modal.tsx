@@ -13,8 +13,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api-client";
-import { Loader2, UserPlus, MapPinPlus, Save } from "lucide-react";
+import { Loader2, UserPlus, MapPinPlus, Save, Building2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface AddEntityModalProps {
   isOpen: boolean;
@@ -70,6 +77,15 @@ export function AddEntityModal({
   const [showVehicleFields, setShowVehicleFields] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
 
+  const [departamentos, setDepartamentos] = useState<any[]>([]);
+  const [showNewDeptInput, setShowNewDeptInput] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      api.get<any[]>("/departamentos").then(setDepartamentos).catch(() => {});
+    }
+  }, [isOpen]);
+
   const handleEmpleadoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     if (name === "ficha") {
@@ -105,6 +121,15 @@ export function AddEntityModal({
         if (!empleadoData.ficha || !empleadoData.nombre || !empleadoData.departamento || (role !== "Conductor" && !empleadoData.cargo)) {
           throw new Error("Todos los campos del empleado son obligatorios");
         }
+
+        // Si el departamento no existe, crearlo primero
+        const existingDept = departamentos.find(d => d.nombre === empleadoData.departamento);
+        if (!existingDept) {
+          await api.post("/departamentos", { nombre: empleadoData.departamento });
+          const updatedDepts = await api.get<any[]>("/departamentos").catch(() => []);
+          setDepartamentos(updatedDepts);
+        }
+
         result = await api.post<{ id: string | number }>("/empleados", { ...empleadoData, rol: role });
         
         // Si es conductor y se seleccionó/creó vehículo, asignar
@@ -197,18 +222,48 @@ export function AddEntityModal({
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="departamento" className={cn(labelClass, "text-[10px]")}>
+                  <Label className={labelClass}>
                     Depto. <span className="text-destructive">*</span>
                   </Label>
-                  <Input
-                    id="departamento"
-                    name="departamento"
-                    placeholder="Ej. Telemática"
-                    value={empleadoData.departamento}
-                    onChange={handleEmpleadoChange}
-                    className={cn("col-span-3", inputClass)}
-                    required
-                  />
+                  <div className="col-span-3">
+                    {showNewDeptInput ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          name="departamento"
+                          placeholder="Nuevo departamento..."
+                          value={empleadoData.departamento}
+                          onChange={handleEmpleadoChange}
+                          className={cn(inputClass, "flex-1")}
+                          required
+                        />
+                        <Button type="button" variant="ghost" size="sm" className="h-8 w-8 shrink-0" onClick={() => { setShowNewDeptInput(false); setEmpleadoData(prev => ({...prev, departamento: ""})); }}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Select 
+                        value={empleadoData.departamento}
+                        onValueChange={(val) => {
+                          if (val === "__new__") {
+                            setShowNewDeptInput(true);
+                            setEmpleadoData(prev => ({...prev, departamento: ""}));
+                          } else {
+                            setEmpleadoData(prev => ({...prev, departamento: val}));
+                          }
+                        }}
+                      >
+                        <SelectTrigger className={cn(inputClass, "w-full")}>
+                          <SelectValue placeholder="Seleccionar departamento..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {departamentos.map(d => (
+                            <SelectItem key={d.id} value={d.nombre}>{d.nombre}</SelectItem>
+                          ))}
+                          <SelectItem value="__new__">+ Crear nuevo departamento</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
                 </div>
                 {role !== "Conductor" && (
                   <div className="grid grid-cols-4 items-center gap-4">

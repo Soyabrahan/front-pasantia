@@ -112,6 +112,7 @@ function MaterialPassForm() {
     fichaConductor: "",
     vehiculoFMO: "",
     vehiculoParticular: "",
+    conductorId: null as number | null,
     vehiculoId: null as number | null,
 
     // Dispatch Info
@@ -128,6 +129,7 @@ function MaterialPassForm() {
     // Observations / Request
 
     solicitud: "",
+    observaciones: "",
 
     // Applicant Info
     solicitante: "",
@@ -204,6 +206,23 @@ function MaterialPassForm() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const assignConductorToVehicle = async (conductorId: number, newVehicleId: number) => {
+    try {
+      const currentVehiculos = await api.get<any[]>("/vehiculos");
+      const oldVehicle = currentVehiculos.find(v =>
+        v.conductores?.some((c: any) => c.id === conductorId)
+      );
+      if (oldVehicle && oldVehicle.id !== newVehicleId) {
+        await api.patch(`/vehiculos/${oldVehicle.id}`, { conductores: [] });
+      }
+      await api.patch(`/vehiculos/${newVehicleId}`, { conductores: [{ id: conductorId }] });
+      const updatedVehiculos = await api.get<any[]>("/vehiculos");
+      setVehiculos(updatedVehiculos);
+    } catch (error) {
+      console.error("Error al actualizar asignación del vehículo:", error);
+    }
+  };
+
   const [items, setItems] = useState<MaterialItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -212,6 +231,7 @@ function MaterialPassForm() {
   const [openConductor, setOpenConductor] = useState(false);
   const [openVehiculo, setOpenVehiculo] = useState(false);
   const [openDespachador, setOpenDespachador] = useState(false);
+  const [isLibre, setIsLibre] = useState(false);
   const [openSolicitante, setOpenSolicitante] = useState(false);
   const [isChangingVehicle, setIsChangingVehicle] = useState(false);
 
@@ -289,7 +309,6 @@ function MaterialPassForm() {
         autorizadorId: pase.autorizador?.id,
         destinoId: pase.destino?.id,
         vehiculoId: pase.vehiculo?.id,
-        observaciones: pase.observaciones,
         solicitud: pase.solicitud,
       });
       setFormData((prev) => ({
@@ -306,6 +325,7 @@ function MaterialPassForm() {
         tipoPago: pase.tipo_pago || "",
         conductor: pase.conductor?.nombre || "",
         fichaConductor: pase.conductor?.ficha || "",
+        conductorId: pase.conductor?.id || null,
         vehiculoFMO: pase.vehiculo?.fmo || "",
         vehiculoParticular: pase.vehiculo?.placa || "",
         vehiculoId: pase.vehiculo?.id || null,
@@ -317,11 +337,16 @@ function MaterialPassForm() {
         cargoAutorizador: pase.autorizador?.cargo || prev.cargoAutorizador,
         fichaAutorizador: pase.autorizador?.ficha || prev.fichaAutorizador,
         solicitud: pase.solicitud || pase.concepto,
+        observaciones: pase.observaciones || "",
         solicitante: pase.solicitador?.nombre || "",
         fichaSolicitante: pase.solicitador?.ficha || "",
         cargoSolicitante: pase.solicitador?.cargo || "",
         departamentoSolicitante: pase.solicitador?.departamento || "",
       }));
+
+      if (pase.observaciones && !pase.solicitador) {
+        setIsLibre(true);
+      }
 
       if (pase.equiposPases && pase.equiposPases.length > 0) {
         const loadedItems = pase.equiposPases.map((ep: any) => ({
@@ -383,7 +408,7 @@ function MaterialPassForm() {
     const requiredFields = [
       { field: 'folio', name: 'N° Pase' },
       { field: 'conceptoOpcion', name: 'Tipo de Movimiento' },
-      { field: 'tiempoEstimado', name: 'Tiempo Estimado' },
+
       { field: 'embargueseA', name: 'Embárguese a' },
       { field: 'direccion', name: 'Dirección' },
       { field: 'telefono', name: 'Teléfono' },
@@ -391,7 +416,7 @@ function MaterialPassForm() {
       { field: 'fichaConductor', name: 'Ficha Conductor' },
       { field: 'despachadoPor', name: 'Material Despachado Por' },
       { field: 'fichaDespachador', name: 'Ficha Despachador' },
-      { field: 'solicitante', name: 'Solicitante' },
+      ...(!isLibre ? [{ field: 'solicitante' as const, name: 'Solicitante' }] : []),
     ];
     const missingFields = requiredFields.filter(rf => !formData[rf.field as keyof typeof formData]);
     
@@ -445,10 +470,8 @@ function MaterialPassForm() {
       conductorId: getEmpleadoId(formData.fichaConductor, "Conductor", originalIds.conductorId),
       despachadorId: getEmpleadoId(formData.fichaDespachador, "Despachador", originalIds.despachadorId),
       autorizadorId: getEmpleadoId(formData.fichaAutorizador, "autorizador", originalIds.autorizadorId),
-      vehiculoId: formData.vehiculoId || originalIds.vehiculoId,
-      observaciones: originalIds.observaciones || "",
+      observaciones: formData.observaciones,
       tiempo_estimado: formData.tiempoEstimado,
-      solicitud: formData.solicitud || formData.conceptoOpcion,
       equipos: items.map((item) => {
         const rawValues = item.identificadores ? item.identificadores.split(',').map(f => f.trim()).filter(f => f !== "") : [];
         const isFMO = item.tipoIdentificador === "FMO";
@@ -524,6 +547,7 @@ function MaterialPassForm() {
         fichaSolicitante: formData.fichaSolicitante,
         cargoSolicitante: formData.cargoSolicitante,
         departamentoSolicitante: formData.departamentoSolicitante,
+        observaciones: formData.observaciones,
       };
       const mappedItemsForPDF = items.map(item => ({
         cantidad: item.cantidad,
@@ -597,12 +621,15 @@ function MaterialPassForm() {
       departamentoDespachador: "",
       ...auth,
       vehiculoId: null,
+      conductorId: null,
       solicitud: "",
+      observaciones: "",
       solicitante: "",
       fichaSolicitante: "",
       cargoSolicitante: "",
       departamentoSolicitante: "",
     }));
+    setIsLibre(false);
     fetchUltimoNumero();
     setItems([]);
     setOriginalIds({});
@@ -853,6 +880,7 @@ function MaterialPassForm() {
                               <CommandItem key={emp.id} value={`${emp.nombre} ${emp.ficha}`} onSelect={() => {
                                 handleInputChange("conductor", emp.nombre);
                                 handleInputChange("fichaConductor", emp.ficha);
+                                handleInputChange("conductorId", emp.id);
                                 const assignedVehicle = vehiculos.find(v => 
                                   v.conductores?.some((c: any) => c.id === emp.id)
                                 );
@@ -932,6 +960,9 @@ function MaterialPassForm() {
                                   handleInputChange("vehiculoParticular", veh.placa || "");
                                   setOpenVehiculo(false);
                                   setIsChangingVehicle(false);
+                                  if (formData.conductorId) {
+                                    assignConductorToVehicle(formData.conductorId, veh.id);
+                                  }
                                 }} className="py-3">
                                   <div className="flex flex-col">
                                     <span className="font-bold">FMO: {veh.fmo}</span>
@@ -949,6 +980,9 @@ function MaterialPassForm() {
                                   handleInputChange("vehiculoParticular", veh.placa);
                                   setOpenVehiculo(false);
                                   setIsChangingVehicle(false);
+                                  if (formData.conductorId) {
+                                    assignConductorToVehicle(formData.conductorId, veh.id);
+                                  }
                                 }} className="py-3">
                                   <span className="font-bold">Placa: {veh.placa}</span>
                                 </CommandItem>
@@ -1054,74 +1088,117 @@ function MaterialPassForm() {
             <CardHeader className="pb-3 border-b bg-muted/20">
               <CardTitle className="text-2xl font-black flex items-center gap-2 text-foreground uppercase">
                 <UserCheck className="h-7 w-7 text-primary" />
-                AUTORIZACIÓN / SOLICITANTE
+                SOLICITANTE
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
-              <div className="space-y-6">
-                <div className="space-y-3">
-                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">SOLICITANTE</Label>
-                  <Popover open={openSolicitante} onOpenChange={setOpenSolicitante}>
-                    <PopoverTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        role="combobox" 
-                        className={cn("w-full h-12 justify-between text-lg", inputStyles)}
-                        onKeyDown={(e) => { if (e.key === "Enter") setOpenSolicitante(true); }}
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <User className="h-5 w-5 text-primary/70" />
-                          {formData.solicitante || "Seleccionar solicitante..."}
-                        </div>
-                        <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Buscar solicitante..." className="h-12" />
-                        <CommandList>
-                          <CommandGroup>
-                            <CommandItem onSelect={() => { openAddModal("empleado", "Solicitante"); setOpenSolicitante(false); }} className="text-primary font-black py-3">
-                              <Plus className="mr-2 h-5 w-5" /> AGREGAR NUEVO SOLICITANTE
-                            </CommandItem>
-                          </CommandGroup>
-                          <CommandSeparator />
-                          <CommandEmpty className="p-4 text-center">No se encontró el empleado.</CommandEmpty>
-                          <CommandGroup heading="Solicitantes">
-                            {empleados
-                              .filter((e) => e.rol?.toLowerCase() === "solicitante")
-                              .map((emp) => (
-                                <CommandItem key={emp.id} value={`${emp.nombre} ${emp.ficha}`} onSelect={() => {
-                                  handleInputChange("solicitante", emp.nombre);
-                                  handleInputChange("fichaSolicitante", emp.ficha);
-                                  handleInputChange("cargoSolicitante", emp.cargo || "");
-                                  handleInputChange("departamentoSolicitante", emp.departamento || "");
-                                  setOpenSolicitante(false);
-                                }} className="py-3">
-                                  <Check className={cn("mr-2 h-4 w-4", formData.fichaSolicitante === emp.ficha ? "opacity-100" : "opacity-0")} />
-                                  <div className="flex flex-col">
-                                    <span className="font-bold">{emp.nombre}</span>
-                                    <span className="text-xs text-muted-foreground">Ficha: {emp.ficha} • {emp.cargo}</span>
-                                  </div>
-                                </CommandItem>
-                              ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">FICHA</span>
-                    <Input className={cn("h-11", readOnlyStyles)} value={formData.fichaSolicitante} readOnly tabIndex={-1} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">CARGO</span>
-                    <Input className={cn("h-11", readOnlyStyles)} value={formData.cargoSolicitante} readOnly tabIndex={-1} />
-                  </div>
-                </div>
+              <div className="flex gap-2 mb-6">
+                <Button
+                  type="button"
+                  variant={!isLibre ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1 h-12 text-lg font-black"
+                  onClick={() => {
+                    setIsLibre(false);
+                  }}
+                >
+                  <User className="h-5 w-5 mr-2" />
+                  SOLICITANTE
+                </Button>
+                <Button
+                  type="button"
+                  variant={isLibre ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1 h-12 text-lg font-black"
+                  onClick={() => {
+                    setIsLibre(true);
+                    handleInputChange("solicitante", "");
+                    handleInputChange("fichaSolicitante", "");
+                    handleInputChange("cargoSolicitante", "");
+                    handleInputChange("departamentoSolicitante", "");
+                    setOpenSolicitante(false);
+                  }}
+                >
+                  <FileText className="h-5 w-5 mr-2" />
+                  LIBRE
+                </Button>
               </div>
+              {!isLibre ? (
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">SOLICITANTE</Label>
+                    <Popover open={openSolicitante} onOpenChange={setOpenSolicitante}>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          role="combobox" 
+                          className={cn("w-full h-12 justify-between text-lg", inputStyles)}
+                          onKeyDown={(e) => { if (e.key === "Enter") setOpenSolicitante(true); }}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <User className="h-5 w-5 text-primary/70" />
+                            {formData.solicitante || "Seleccionar solicitante..."}
+                          </div>
+                          <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Buscar solicitante..." className="h-12" />
+                          <CommandList>
+                            <CommandGroup>
+                              <CommandItem onSelect={() => { openAddModal("empleado", "Solicitante"); setOpenSolicitante(false); }} className="text-primary font-black py-3">
+                                <Plus className="mr-2 h-5 w-5" /> AGREGAR NUEVO SOLICITANTE
+                              </CommandItem>
+                            </CommandGroup>
+                            <CommandSeparator />
+                            <CommandEmpty className="p-4 text-center">No se encontró el empleado.</CommandEmpty>
+                            <CommandGroup heading="Solicitantes">
+                              {empleados
+                                .filter((e) => e.rol?.toLowerCase() === "solicitante")
+                                .map((emp) => (
+                                  <CommandItem key={emp.id} value={`${emp.nombre} ${emp.ficha}`} onSelect={() => {
+                                    handleInputChange("solicitante", emp.nombre);
+                                    handleInputChange("fichaSolicitante", emp.ficha);
+                                    handleInputChange("cargoSolicitante", emp.cargo || "");
+                                    handleInputChange("departamentoSolicitante", emp.departamento || "");
+                                    setOpenSolicitante(false);
+                                  }} className="py-3">
+                                    <Check className={cn("mr-2 h-4 w-4", formData.fichaSolicitante === emp.ficha ? "opacity-100" : "opacity-0")} />
+                                    <div className="flex flex-col">
+                                      <span className="font-bold">{emp.nombre}</span>
+                                      <span className="text-xs text-muted-foreground">Ficha: {emp.ficha} • {emp.cargo}</span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">FICHA</span>
+                      <Input className={cn("h-11", readOnlyStyles)} value={formData.fichaSolicitante} readOnly tabIndex={-1} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">CARGO</span>
+                      <Input className={cn("h-11", readOnlyStyles)} value={formData.cargoSolicitante} readOnly tabIndex={-1} />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <Label className="text-base font-black text-foreground font-black uppercase tracking-tight">OBSERVACIÓN / COMENTARIO</Label>
+                  <Textarea
+                    className={cn("min-h-[120px] text-base", inputStyles)}
+                    placeholder="Escriba cualquier observación o comentario..."
+                    value={formData.observaciones}
+                    onChange={(e) => handleInputChange("observaciones", e.target.value)}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -1164,7 +1241,7 @@ function MaterialPassForm() {
         onClose={() => setModalType(null)}
         type={modalType || "empleado"}
         role={modalRole || undefined}
-        onSuccess={async () => {
+        onSuccess={async (result?: any) => {
           if (modalType === "destino") {
             const data = await api.get<Destino[]>("/destinos");
             setDestinos(data);
@@ -1174,6 +1251,9 @@ function MaterialPassForm() {
           } else if (modalType === "vehiculo") {
             const data = await api.get<any[]>("/vehiculos");
             setVehiculos(data);
+            if (formData.conductorId && result?.id) {
+              await assignConductorToVehicle(formData.conductorId, result.id);
+            }
           }
           setModalType(null);
         }}

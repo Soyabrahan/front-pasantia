@@ -44,6 +44,9 @@ interface FormData {
     fichaSolicitante?: string;
     cargoSolicitante?: string;
     departamentoSolicitante?: string;
+
+    // Observations
+    observaciones?: string;
 }
 
 interface Item {
@@ -177,6 +180,11 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
         { k: 'foraneo', l: 'FORÁNEO' },
     ];
 
+    const selectedConcept = checkboxes.find(c => formData.concepto?.[c.k as keyof Conceptos]);
+    if (selectedConcept) {
+        drawT(selectedConcept.l, margin + 18, midY + 4, 7, 'bold');
+    }
+
     let cy = midY + 11.5;
     checkboxes.forEach((c) => {
         rect(margin + 5, cy, 3, 3);
@@ -300,7 +308,12 @@ export const generatePDF = (formData: FormData, items: Item[]) => {
     drawT('DIRIGIDO A:', dirX + 1.5, row5Y + 4, 8, 'normal');
     drawT('SOLICITUD:', solX + 1.5, row5Y + 4, 8, 'normal');
 
-    if (formData.solicitante) {
+    if (formData.observaciones) {
+        const lines = doc.splitTextToSize(formData.observaciones.toUpperCase(), (dirX - rightX) - 5);
+        lines.forEach((line: string, i: number) => {
+            drawT(line, rightX + 1.5, row5Y + 11 + (i * 4), 6, 'bold', 'left', (dirX - rightX) - 5);
+        });
+    } else if (formData.solicitante) {
         const usuarioText = `USUARIO: ${formData.solicitante.toUpperCase()} F-${formData.fichaSolicitante || ''} ${formData.cargoSolicitante?.toUpperCase() || ''} DE ${formData.departamentoSolicitante?.toUpperCase() || ''}`;
         drawT(usuarioText, rightX + 1.5, row5Y + 11, 5.5, 'bold', 'left', (dirX - rightX) - 5);
     }
