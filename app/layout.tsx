@@ -11,7 +11,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { ThemeProvider } from "@/components/theme-provider"
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts"
-import { decodeToken, getToken, hasRequiredRole, isTokenExpired } from "@/lib/auth-utils"
+import { decodeToken, getToken, hasRequiredRole } from "@/lib/auth-utils"
 
 const outfit = localFont({ 
   src: '../public/fonts/Outfit-VariableFont_wght.ttf',
@@ -32,16 +32,22 @@ export default function RootLayout({
 
   const [isMounted, setIsMounted] = React.useState(false)
   const [isLoading, setIsLoading] = React.useState(true)
+  const hasRedirected = React.useRef(false)
 
   useEffect(() => {
     setIsMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isMounted) return
+
     const token = getToken()
     let isValidToken = false
     let payload = null
 
     if (token) {
       payload = decodeToken(token)
-      if (payload && !isTokenExpired(payload)) {
+      if (payload) {
         isValidToken = true
       } else {
         localStorage.removeItem("auth_token")
@@ -49,18 +55,25 @@ export default function RootLayout({
     }
 
     if (!isValidToken && !isAuthPage) {
-      setIsLoading(true)
-      router.push("/login")
+      if (!hasRedirected.current) {
+        hasRedirected.current = true
+        router.push("/login")
+      }
     } else if (isValidToken && isAuthPage) {
-      setIsLoading(true)
-      router.push("/")
+      if (!hasRedirected.current) {
+        hasRedirected.current = true
+        router.push("/")
+      }
     } else if (isValidToken && payload && !hasRequiredRole(payload, pathname)) {
-      setIsLoading(true)
-      router.push("/")
+      if (!hasRedirected.current) {
+        hasRedirected.current = true
+        router.push("/")
+      }
     } else {
+      hasRedirected.current = false
       setIsLoading(false)
     }
-  }, [isAuthPage, pathname, router])
+  }, [isMounted, isAuthPage, pathname, router])
 
   return (
     <html lang="en" suppressHydrationWarning>

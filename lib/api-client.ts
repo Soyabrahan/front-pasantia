@@ -1,8 +1,11 @@
 import { redirectToLogin } from "./auth-utils";
 
-// Usamos la IP directa del backend para que funcione sin Nginx (necesario para .exe/.deb)
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://170.104.30.190:3001";
+// En desarrollo, usamos el proxy de Next.js (/api) para evitar problemas de CORS.
+// En producción (export estático), usamos la IP directa del backend.
+const isDev = process.env.NODE_ENV === "development";
+const API_BASE_URL = isDev
+  ? "/api"
+  : process.env.NEXT_PUBLIC_API_URL || "http://10.200.30.143:3001";
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
@@ -51,7 +54,6 @@ export async function apiRequest<T>(
     });
   } catch (error) {
     console.error(`[Network Error] ${endpoint} - No se pudo conectar al servidor`, error);
-    redirectToLogin();
     throw new Error("No se pudo conectar con el servidor. Verifique su conexión.");
   }
 

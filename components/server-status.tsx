@@ -20,8 +20,13 @@ export function ServerStatus({
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
+      const isDev = process.env.NODE_ENV === "development";
+      const baseUrl = isDev
+        ? "/api"
+        : (process.env.NEXT_PUBLIC_API_URL || "http://10.200.30.143:3001");
+
       await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://170.104.30.190:3001"}/`,
+        `${baseUrl}/`,
         {
           method: "GET",
           cache: "no-cache",

@@ -35,7 +35,7 @@ export default function LoginPage() {
         localStorage.setItem("auth_token", response.access_token)
         document.cookie = `auth_token=${response.access_token}; path=/; max-age=86400; SameSite=Lax`
         toast.success("Bienvenido al sistema")
-        router.push("/")
+        window.location.href = "/"
       }
     } catch (error: any) {
       toast.error(error.message || "Credenciales inválidas")
