@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { ShieldCheck, Calendar as CalendarIcon, User, Search, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+    ShieldCheck, Calendar as CalendarIcon, User, Search, Clock,
+    ChevronLeft, ChevronRight, HelpCircle
+} from "lucide-react";
 import { Header } from "@/components/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,10 +16,19 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { decodeToken, getToken, getTokenRole, isNetworkError, isTokenExpired } from "@/lib/auth-utils";
+import { AuditChat } from "@/components/auditoria/audit-chat";
 
 interface AuditLog {
     id: string;
@@ -37,7 +49,31 @@ interface PaginatedResponse {
     totalPages: number;
 }
 
-const ITEMS_PER_PAGE = 15;
+interface DiffEntry {
+    label: string;
+    oldValue: string;
+    newValue: string;
+}
+
+const ITEMS_PER_PAGE = 10;
+
+function parseDiff(accion: string): DiffEntry[] | null {
+    const match = accion.match(/— Cambios: (.+)/);
+    if (!match) return null;
+    const changes = match[1].split('; ');
+    return changes.map(c => {
+        const sep = c.indexOf('→');
+        if (sep === -1) return { label: c.trim(), oldValue: '', newValue: '' };
+        const labelEnd = c.indexOf(':');
+        const label = labelEnd > 0 ? c.substring(0, labelEnd).trim() : '';
+        const afterLabel = c.substring(labelEnd + 1).trim();
+        const bar = afterLabel.indexOf('→');
+        if (bar === -1) return { label, oldValue: afterLabel.trim(), newValue: '' };
+        const oldValue = afterLabel.substring(0, bar).trim().replace(/^'|'$/g, '');
+        const newValue = afterLabel.substring(bar + 1).trim().replace(/^'|'$/g, '');
+        return { label, oldValue, newValue };
+    });
+}
 
 export default function AuditoriaPage() {
     const router = useRouter();
@@ -46,6 +82,7 @@ export default function AuditoriaPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
+    const [diffModal, setDiffModal] = useState<{ accion: string; diff: DiffEntry[] } | null>(null);
 
     const fetchLogs = useCallback(async (pageNum: number) => {
         setLoading(true);
@@ -146,7 +183,9 @@ export default function AuditoriaPage() {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    logs.map((log) => (
+                                    logs.map((log) => {
+                                        const diff = log.accion.includes('editado') ? parseDiff(log.accion) : null;
+                                        return (
                                         <TableRow key={log.id} className="hover:bg-muted/20 transition-colors group cursor-default border-border/20">
                                             <TableCell className="font-medium text-foreground text-left">
                                                 {new Date(log.fechaHora).toLocaleString("es-ES")}
@@ -164,21 +203,34 @@ export default function AuditoriaPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-left">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                                                    log.accion.includes('Eliminación') ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                                                    log.accion.includes('Creación') ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                                                    log.accion.includes('Actualización') ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                    'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
-                                                }`}>
-                                                    {log.accion}
-                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                                        log.accion.includes('Eliminación') ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                                                        log.accion.includes('Creación') ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                                                        log.accion.includes('Actualización') || log.accion.includes('editado') ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                        'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                                                    }`}>
+                                                        {log.accion}
+                                                    </span>
+                                                    {diff && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6 rounded-full text-blue-600 hover:text-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                                                            onClick={() => setDiffModal({ accion: log.accion, diff })}
+                                                            title="Ver cambios"
+                                                        >
+                                                            <HelpCircle className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             </TableCell>
                                             <TableCell className="text-left text-xs font-mono text-muted-foreground">
                                                 <span className="font-bold mr-2">{log.metodo}</span> 
                                                 {log.ruta}
                                             </TableCell>
                                         </TableRow>
-                                    ))
+                                    )})
                                 )}
                             </TableBody>
                         </Table>
@@ -223,6 +275,40 @@ export default function AuditoriaPage() {
                     </CardContent>
                 </Card>
             </main>
+
+            {/* Modal de Cambios */}
+            <Dialog open={!!diffModal} onOpenChange={(open) => { if (!open) setDiffModal(null); }}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tight">Cambios</DialogTitle>
+                        <DialogDescription>
+                            Atributos modificados en este pase
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                        {diffModal?.diff.map((item, i) => (
+                            <div key={i} className="border border-border rounded-lg overflow-hidden">
+                                <div className="bg-muted/50 px-4 py-2 font-bold text-sm uppercase tracking-wide text-foreground border-b border-border">
+                                    {item.label}
+                                </div>
+                                <div className="grid grid-cols-2 divide-x divide-border">
+                                    <div className="p-3 space-y-1">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-red-600">Antes</span>
+                                        <p className="text-sm text-muted-foreground break-words">{item.oldValue || '(vacío)'}</p>
+                                    </div>
+                                    <div className="p-3 space-y-1">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-green-600">Después</span>
+                                        <p className="text-sm text-foreground font-medium break-words">{item.newValue || '(vacío)'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Chat Inteligente de Auditoría */}
+            <AuditChat />
         </div>
     );
 }

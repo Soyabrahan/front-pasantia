@@ -123,7 +123,7 @@ export function PasesByDestinoChart({ data, label, variant = "destino" }: PasesB
             tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
           />
           <ChartTooltip
-            cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+            cursor={false}
             content={
               <ChartTooltipContent
                 formatter={(value: unknown) => {

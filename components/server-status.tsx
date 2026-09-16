@@ -21,7 +21,7 @@ export function ServerStatus({
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
       await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://10.200.23.71:3001"}/`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://170.104.30.190:3001"}/`,
         {
           method: "GET",
           cache: "no-cache",

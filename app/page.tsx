@@ -85,6 +85,9 @@ function MaterialPassForm() {
   
   const [formatoObservacion, setFormatoObservacion] = useState<"detallada" | "solo-solicitante" | "libre">("detallada");
 
+  const FORM_STORAGE_KEY = "fmo_pase_form_data";
+  const ITEMS_STORAGE_KEY = "fmo_pase_items";
+
   // Validation Modal State
   const [validationModal, setValidationModal] = useState({
     isOpen: false,
@@ -291,9 +294,7 @@ function MaterialPassForm() {
         despachadorId: pase.despachador?.id,
         autorizadorId: pase.autorizador?.id,
         destinoId: pase.destino?.id,
-        vehiculoId: pase.vehiculo?.id,
         observaciones: pase.observaciones,
-        solicitud: pase.solicitud,
       });
       setFormData((prev) => ({
         ...prev,
@@ -309,21 +310,20 @@ function MaterialPassForm() {
         tipoPago: pase.tipo_pago || "",
         conductor: pase.conductor?.nombre || "",
         fichaConductor: pase.conductor?.ficha || "",
-        vehiculoFMO: pase.vehiculo?.fmo || "",
-        vehiculoParticular: pase.vehiculo?.placa || "",
-        vehiculoId: pase.vehiculo?.id || null,
+        vehiculoFMO: "",
+        vehiculoParticular: pase.vehiculo_snapshot || "",
+        vehiculoId: null,
         despachadoPor: pase.despachador?.nombre || "",
         fichaDespachador: pase.despachador?.ficha || "",
         cargoDespachador: pase.despachador?.cargo || "",
-        departamentoDespachador: pase.despachador?.departamento || "",
+        departamentoDespachador: pase.despachador?.departamento?.nombre || pase.despachador?.departamento || "",
         autorizadoPor: pase.autorizador?.nombre || prev.autorizadoPor,
         cargoAutorizador: pase.autorizador?.cargo || prev.cargoAutorizador,
         fichaAutorizador: pase.autorizador?.ficha || prev.fichaAutorizador,
-        solicitud: pase.solicitud || pase.concepto,
         solicitante: pase.solicitador?.nombre || "",
         fichaSolicitante: pase.solicitador?.ficha || "",
         cargoSolicitante: pase.solicitador?.cargo || "",
-        departamentoSolicitante: pase.solicitador?.departamento || "",
+        departamentoSolicitante: pase.solicitador?.departamento?.nombre || pase.solicitador?.departamento || "",
       }));
 
       if (pase.equiposPases && pase.equiposPases.length > 0) {
@@ -379,7 +379,40 @@ function MaterialPassForm() {
     fetchDestinos();
     fetchEmpleados();
     fetchVehiculos();
+
+    if (!editId) {
+      const saved = sessionStorage.getItem(FORM_STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setFormData(prev => ({ ...prev, ...parsed }));
+        } catch (e) {
+          sessionStorage.removeItem(FORM_STORAGE_KEY);
+        }
+      }
+      const savedItems = sessionStorage.getItem(ITEMS_STORAGE_KEY);
+      if (savedItems) {
+        try {
+          setItems(JSON.parse(savedItems));
+        } catch (e) {
+          sessionStorage.removeItem(ITEMS_STORAGE_KEY);
+        }
+      }
+    }
   }, []);
+
+  useEffect(() => {
+    if (!editId && mounted) {
+      const { fecha, hora, ...rest } = formData;
+      sessionStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(rest));
+    }
+  }, [formData, editId, mounted]);
+
+  useEffect(() => {
+    if (!editId && mounted) {
+      sessionStorage.setItem(ITEMS_STORAGE_KEY, JSON.stringify(items));
+    }
+  }, [items, editId, mounted]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -441,17 +474,15 @@ function MaterialPassForm() {
     const paseBody = {
       numeroPase: formData.folio,
       concepto: formData.conceptoOpcion,
-      destinoId: destinos.find((d) => d.nombre === formData.embargueseA)?.id || originalIds.destinoId || null,
+      destinoId: destinos.find((d) => d.nombre.toUpperCase() === formData.embargueseA)?.id || originalIds.destinoId || null,
       numero_compra: formData.ordenCompra,
       tipo_pago: formData.tipoPago,
       solicitadorId: getEmpleadoId(formData.fichaSolicitante, "Solicitante", originalIds.solicitadorId),
       conductorId: getEmpleadoId(formData.fichaConductor, "Conductor", originalIds.conductorId),
       despachadorId: getEmpleadoId(formData.fichaDespachador, "Despachador", originalIds.despachadorId),
       autorizadorId: getEmpleadoId(formData.fichaAutorizador, "autorizador", originalIds.autorizadorId),
-      vehiculoId: formData.vehiculoId || originalIds.vehiculoId,
       observaciones: originalIds.observaciones || "",
       tiempo_estimado: formData.tiempoEstimado,
-      solicitud: formData.solicitud || formData.conceptoOpcion,
       equipos: items.map((item) => {
         const rawValues = item.identificadores ? item.identificadores.split(',').map(f => f.trim()).filter(f => f !== "") : [];
         const isFMO = item.tipoIdentificador === "FMO";
@@ -473,10 +504,17 @@ function MaterialPassForm() {
     };
     try {
       if (isEditing && editId) {
+        // PATCH now creates a new pase with new ID and same numeroPase
         const patchResult: any = await api.patch(`/pases/${editId}`, paseBody);
         const editedPases = JSON.parse(localStorage.getItem("edited_pases") || "{}");
-        editedPases[editId] = patchResult?.updatedAt || new Date().toISOString();
+        // Mark both the original and the new pase ID so both show the edited icon
+        const timestamp = patchResult?.updatedAt || new Date().toISOString();
+        editedPases[editId] = timestamp;
+        if (patchResult?.id) {
+            editedPases[patchResult.id] = timestamp;
+        }
         localStorage.setItem("edited_pases", JSON.stringify(editedPases));
+        sessionStorage.setItem("last_edited_pase_new_id", patchResult?.id?.toString() || "");
       } else {
         await api.post("/pases", paseBody);
       }
@@ -541,6 +579,8 @@ function MaterialPassForm() {
       }));
       const { generatePDF } = await import("@/lib/generatePdf");
       generatePDF(pdfData, mappedItemsForPDF);
+      sessionStorage.removeItem(FORM_STORAGE_KEY);
+      sessionStorage.removeItem(ITEMS_STORAGE_KEY);
       setIsSubmitted(true);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Error desconocido al registrar el pase";
@@ -584,6 +624,8 @@ function MaterialPassForm() {
       auth.cargoAutorizador = settings.gerenteCargo || auth.cargoAutorizador;
       auth.fichaAutorizador = settings.gerenteFicha || auth.fichaAutorizador;
     }
+    sessionStorage.removeItem(FORM_STORAGE_KEY);
+    sessionStorage.removeItem(ITEMS_STORAGE_KEY);
     setFormData((prev) => ({
       folio: prev.folio,
       fecha: new Date().toISOString().split("T")[0],
@@ -765,7 +807,7 @@ function MaterialPassForm() {
                                 handleInputChange("telefono", d.telefono);
                                 setOpenDestino(false);
                               }} className="py-3">
-                                <Check className={cn("mr-2 h-4 w-4", formData.embargueseA === d.nombre ? "opacity-100" : "opacity-0")} />
+                                <Check className={cn("mr-2 h-4 w-4", formData.embargueseA === d.nombre.toUpperCase() ? "opacity-100" : "opacity-0")} />
                                 <div className="flex flex-col">
                                   <span className="font-bold">{d.nombre}</span>
                                   <span className="text-xs text-muted-foreground truncate">{d.direccion}</span>
@@ -1030,7 +1072,7 @@ function MaterialPassForm() {
                                   handleInputChange("despachadoPor", emp.nombre);
                                   handleInputChange("fichaDespachador", emp.ficha);
                                   handleInputChange("cargoDespachador", emp.cargo || "");
-                                  handleInputChange("departamentoDespachador", emp.departamento || "");
+                                  handleInputChange("departamentoDespachador", emp.departamento?.nombre || emp.departamento || "");
                                   setOpenDespachador(false);
                                 }} className="py-3">
                                   <Check className={cn("mr-2 h-4 w-4", formData.fichaDespachador === emp.ficha ? "opacity-100" : "opacity-0")} />
@@ -1141,7 +1183,7 @@ function MaterialPassForm() {
                                       handleInputChange("solicitante", emp.nombre);
                                       handleInputChange("fichaSolicitante", emp.ficha);
                                       handleInputChange("cargoSolicitante", emp.cargo || "");
-                                      handleInputChange("departamentoSolicitante", emp.departamento || "");
+                                      handleInputChange("departamentoSolicitante", emp.departamento?.nombre || emp.departamento || "");
                                       setOpenSolicitante(false);
                                     }} className="py-3">
                                       <Check className={cn("mr-2 h-4 w-4", formData.fichaSolicitante === emp.ficha ? "opacity-100" : "opacity-0")} />
@@ -1246,15 +1288,15 @@ function MaterialPassForm() {
                 }
               }
             } else if (formData?.role === "Solicitante") {
-              handleInputChange("solicitante", formData.nombre);
-              handleInputChange("fichaSolicitante", formData.ficha);
-              handleInputChange("cargoSolicitante", formData.cargo || "");
-              handleInputChange("departamentoSolicitante", formData.departamento || "");
+              handleInputChange("solicitante", result.nombre || formData.nombre);
+              handleInputChange("fichaSolicitante", result.ficha || formData.ficha);
+              handleInputChange("cargoSolicitante", result.cargo || formData.cargo || "");
+              handleInputChange("departamentoSolicitante", result.departamento?.nombre || result.departamento || "");
             } else if (formData?.role === "Despachador") {
-              handleInputChange("despachadoPor", formData.nombre);
-              handleInputChange("fichaDespachador", formData.ficha);
-              handleInputChange("cargoDespachador", formData.cargo || "");
-              handleInputChange("departamentoDespachador", formData.departamento || "");
+              handleInputChange("despachadoPor", result.nombre || formData.nombre);
+              handleInputChange("fichaDespachador", result.ficha || formData.ficha);
+              handleInputChange("cargoDespachador", result.cargo || formData.cargo || "");
+              handleInputChange("departamentoDespachador", result.departamento?.nombre || result.departamento || "");
             }
           } else if (modalType === "vehiculo") {
             const data = await api.get<any[]>("/vehiculos");

@@ -5,11 +5,11 @@ interface PaseRecord {
     id: string;
     numeroPase: string;
     fecha_emision: string;
+    concepto?: string;
     solicitador?: { nombre: string; ficha: string };
     conductor?: { nombre: string; ficha: string };
-    vehiculo?: { placa: string; modelo: string };
+    vehiculo_snapshot?: string;
     destino?: { nombre: string; direccion: string; telefono?: string };
-    solicitud?: string;
 }
 
 const TITLE = 'CONTROL DE SALIDAS DE PASE PARA MATERIALES Y MISCELANEOS';
@@ -93,7 +93,7 @@ export const generateControlPdf = (
             : '';
 
         const vehiculoText = pase?.conductor
-            ? `${pase.conductor.nombre || ''}${pase.conductor.ficha ? ` F-${pase.conductor.ficha}` : ''}${pase.vehiculo?.placa ? ` V: ${pase.vehiculo.placa}` : ''}`
+            ? `${pase.conductor.nombre || ''}${pase.conductor.ficha ? ` F-${pase.conductor.ficha}` : ''}${pase.vehiculo_snapshot ? ` V: ${pase.vehiculo_snapshot}` : ''}`
             : '';
 
         body.push([

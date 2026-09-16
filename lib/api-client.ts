@@ -2,7 +2,7 @@ import { redirectToLogin } from "./auth-utils";
 
 // Usamos la IP directa del backend para que funcione sin Nginx (necesario para .exe/.deb)
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://10.200.23.71:3001";
+  process.env.NEXT_PUBLIC_API_URL || "http://170.104.30.190:3001";
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string>;

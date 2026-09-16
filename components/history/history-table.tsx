@@ -59,11 +59,10 @@ interface PaseRecord {
     updatedAt?: string;
     solicitador?: { nombre: string, ficha: string };
     conductor?: { nombre: string, ficha: string };
-    vehiculo?: { placa: string, modelo: string };
+    vehiculo_snapshot?: string;
     destino?: { nombre: string, direccion: string, telefono?: string };
     observaciones?: string;
     tiempo_estimado?: string;
-    solicitud?: string;
     equiposPases?: any[];
 }
 
@@ -245,14 +244,14 @@ export function HistoryTable() {
                 credito: pase.tipo_pago === "CREDITO",
                 conductor: pase.conductor?.nombre || "",
                 fichaConductor: pase.conductor?.ficha || "",
-                vehiculoFmo: pase.vehiculo?.fmo || "",
-                vehiculoParticular: pase.vehiculo?.placa || "",
-                departamento: pase.despachador?.departamento || "",
+                vehiculoFmo: "",
+                vehiculoParticular: pase.vehiculo_snapshot || "",
+                departamento: pase.despachador?.departamento?.nombre || pase.despachador?.departamento || "",
                 cargo: pase.despachador?.cargo || "",
                 fichaDespachador: pase.despachador?.ficha || "",
                 despachadoPor: pase.despachador?.nombre || "",
                 dirigidoA: pase.observaciones || "",
-                solicitud: pase.solicitud || "",
+                solicitud: pase.concepto || "",
                 tiempoEstimado: pase.tiempo_estimado || "",
                 autorizadoPor: pase.autorizador?.nombre,
                 cargoAutorizador: pase.autorizador?.cargo,
@@ -260,7 +259,7 @@ export function HistoryTable() {
                 solicitante: pase.solicitador?.nombre,
                 fichaSolicitante: pase.solicitador?.ficha,
                 cargoSolicitante: pase.solicitador?.cargo,
-                departamentoSolicitante: pase.solicitador?.departamento,
+                departamentoSolicitante: pase.solicitador?.departamento?.nombre || pase.solicitador?.departamento || "",
             };
 
             // Grouping logic for PDF items
@@ -297,6 +296,25 @@ export function HistoryTable() {
         } catch (error) {
             console.error("Error generating PDF:", error);
             toast.error("Error al generar el PDF");
+        }
+    };
+
+    const handleDownloadExcel = async (id: string) => {
+        try {
+            const pase = await api.get<any>(`/pases/${id}`);
+
+            if (!pase) {
+                toast.error("No se encontró la información del pase");
+                return;
+            }
+
+            const { generateSingleExcel } = await import("@/lib/generateSingleExcel");
+            generateSingleExcel(pase);
+            toast.success("Excel generado correctamente");
+            logAuditAction(`Exportación de Excel - Pase N° ${pase.numeroPase}`);
+        } catch (error) {
+            console.error("Error generating Excel:", error);
+            toast.error("Error al generar el Excel");
         }
     };
 
@@ -648,6 +666,16 @@ export function HistoryTable() {
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
+                                                <Button 
+                                                    variant="secondary" 
+                                                    size="sm" 
+                                                    className="h-8 w-8 p-0 transition-colors bg-emerald-900/20 hover:bg-emerald-900/40 text-emerald-400 border border-emerald-900/50"
+                                                    onClick={() => handleDownloadExcel(item.id)}
+                                                    title="Exportar a Excel"
+                                                >
+                                                    <FileSpreadsheet className="h-4 w-4" />
+                                                    <span className="sr-only">Exportar a Excel</span>
+                                                </Button>
                                                 <Button 
                                                     variant="secondary" 
                                                     size="sm" 

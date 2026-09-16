@@ -27,7 +27,7 @@ export default function LoginPage() {
 
     try {
       const response: any = await api.post("/auth/login", {
-        ficha: formData.username,
+        ficha: formData.username.toUpperCase(),
         contrasena: formData.password
       })
 

@@ -27,6 +27,7 @@ import {
     Check,
     ChevronsUpDown,
     Tag,
+    Building2,
 } from "lucide-react"
 import {
     DropdownMenu,
@@ -127,7 +128,7 @@ export default function ConfigurationPage() {
     const [newUsuario, setNewUsuario] = useState({ ficha: "", nombre: "", rol: "Administrador", contrasena: "admin" })
     const [newVehiculo, setNewVehiculo] = useState({ placa: "", modelo: "", tipo: "", esFMO: false, fmo: "", conductorId: "" })
     const [newDestino, setNewDestino] = useState({ nombre: "", direccion: "", telefono: "" })
-    const [newEmpleado, setNewEmpleado] = useState({ ficha: "", nombre: "", departamento: "", cargo: "" })
+    const [newEmpleado, setNewEmpleado] = useState({ ficha: "", nombre: "", departamentoId: "", cargo: "" })
 
     // Estados para Edición
     const [editingVehiculoId, setEditingVehiculoId] = useState<number | null>(null)
@@ -141,6 +142,15 @@ export default function ConfigurationPage() {
     const [newMarca, setNewMarca] = useState({ nombre: "" })
     const [editingMarcaId, setEditingMarcaId] = useState<number | null>(null)
     const [editMarca, setEditMarca] = useState<any>(null)
+    const [departamentos, setDepartamentos] = useState<any[]>([])
+    const [isAddingDepartamento, setIsAddingDepartamento] = useState(false)
+    const [newDepartamento, setNewDepartamento] = useState({ nombre: "" })
+    const [editingDepartamentoId, setEditingDepartamentoId] = useState<number | null>(null)
+    const [editDepartamento, setEditDepartamento] = useState<any>(null)
+
+    // Quick-add department states
+    const [showQuickDepto, setShowQuickDepto] = useState(false)
+    const [quickDeptoName, setQuickDeptoName] = useState("")
 
     // Estados para selector de gerente
     const [openGerente, setOpenGerente] = useState(false)
@@ -156,18 +166,20 @@ export default function ConfigurationPage() {
     const fetchAll = async () => {
         setLoading(true)
         try {
-            const [u, v, d, e, m] = await Promise.all([
+            const [u, v, d, e, m, dep] = await Promise.all([
                 api.get<any[]>("/usuarios/all").catch(() => []), 
                 api.get<any[]>("/vehiculos"),
                 api.get<any[]>("/destinos"),
                 api.get<any[]>("/empleados").catch(() => []),
                 api.get<any[]>("/marcas").catch(() => []),
+                api.get<any[]>("/departamentos").catch(() => []),
             ])
             setUsuarios(u)
             setVehiculos(v)
             setDestinos(d)
             setEmpleados(e)
             setMarcas(m)
+            setDepartamentos(dep)
         } catch (error) {
             console.error("Error loading config data:", error)
         } finally {
@@ -316,10 +328,15 @@ export default function ConfigurationPage() {
 
     const handleSaveEmpleado = async () => {
         try {
-            const saved = await api.post<any>("/empleados", newEmpleado)
-            setEmpleados([...empleados, saved])
+            const payload = {
+                ...newEmpleado,
+                departamentoId: newEmpleado.departamentoId ? parseInt(newEmpleado.departamentoId) : undefined,
+            }
+            await api.post<any>("/empleados", payload)
+            const data = await api.get<any[]>("/empleados").catch(() => [])
+            setEmpleados(data)
             setIsAddingEmpleado(false)
-            setNewEmpleado({ ficha: "", nombre: "", departamento: "", cargo: "" })
+            setNewEmpleado({ ficha: "", nombre: "", departamentoId: "", cargo: "" })
         } catch (error) {
             alert("Error al guardar empleado")
         }
@@ -368,8 +385,13 @@ export default function ConfigurationPage() {
 
     const handleUpdateEmpleado = async (id: number) => {
         try {
-            const updated = await api.patch<any>(`/empleados/${id}`, editEmpleado)
-            setEmpleados(empleados.map(e => e.id === id ? updated : e))
+            const payload = {
+                ...editEmpleado,
+                departamentoId: editEmpleado.departamentoId ? parseInt(editEmpleado.departamentoId) : undefined,
+            }
+            await api.patch<any>(`/empleados/${id}`, payload)
+            const data = await api.get<any[]>("/empleados").catch(() => [])
+            setEmpleados(data)
             setEditingEmpleadoId(null)
         } catch (error) {
             alert("Error al actualizar empleado")
@@ -434,6 +456,54 @@ export default function ConfigurationPage() {
             setMarcas(marcas.filter(m => m.id !== id))
         } catch (error) {
             alert("Error al borrar")
+        }
+    }
+
+    const handleSaveDepartamento = async () => {
+        try {
+            const saved = await api.post<any>("/departamentos", newDepartamento)
+            setDepartamentos([...departamentos, saved])
+            setIsAddingDepartamento(false)
+            setNewDepartamento({ nombre: "" })
+        } catch (error) {
+            alert("Error al guardar departamento")
+        }
+    }
+
+    const handleUpdateDepartamento = async (id: number) => {
+        try {
+            const updated = await api.patch<any>(`/departamentos/${id}`, editDepartamento)
+            setDepartamentos(departamentos.map(d => d.id === id ? updated : d))
+            setEditingDepartamentoId(null)
+        } catch (error) {
+            alert("Error al actualizar departamento")
+        }
+    }
+
+    const handleDeleteDepartamento = async (id: number) => {
+        if (!confirm("¿Borrar departamento?")) return
+        try {
+            await api.delete(`/departamentos/${id}`)
+            setDepartamentos(departamentos.filter(d => d.id !== id))
+        } catch (error) {
+            alert("Error al borrar")
+        }
+    }
+
+    const handleQuickAddDepto = async (target: "new" | "edit") => {
+        if (!quickDeptoName.trim()) return
+        try {
+            const saved = await api.post<any>("/departamentos", { nombre: quickDeptoName.toUpperCase() })
+            setDepartamentos([...departamentos, saved])
+            if (target === "new") {
+                setNewEmpleado({ ...newEmpleado, departamentoId: saved.id.toString() })
+            } else {
+                setEditEmpleado({ ...editEmpleado, departamentoId: saved.id.toString() })
+            }
+            setQuickDeptoName("")
+            setShowQuickDepto(false)
+        } catch (error) {
+            alert("Error al crear departamento")
         }
     }
 
@@ -538,7 +608,7 @@ export default function ConfigurationPage() {
             <main className="p-6 space-y-6 max-w-6xl mx-auto animate-fadeIn">
 
                 <Tabs defaultValue="usuarios" className="w-full" onValueChange={setActiveTab}>
-                    <TabsList className="grid w-full grid-cols-6 md:w-[780px] mb-4">
+                    <TabsList className="grid w-full grid-cols-7 md:w-[910px] mb-4">
                         <TabsTrigger value="usuarios" className="flex gap-2 text-xs md:text-sm">
                             <UsersIcon className="h-4 w-4" />
                             Usuarios
@@ -554,6 +624,10 @@ export default function ConfigurationPage() {
                         <TabsTrigger value="marcas" className="flex gap-2 text-xs md:text-sm">
                             <Tag className="h-4 w-4" />
                             Marcas
+                        </TabsTrigger>
+                        <TabsTrigger value="departamentos" className="flex gap-2 text-xs md:text-sm">
+                            <Building2 className="h-4 w-4" />
+                            Departamentos
                         </TabsTrigger>
                         <TabsTrigger value="empleados" className="flex gap-2 text-xs md:text-sm">
                             <User className="h-4 w-4" />
@@ -1261,6 +1335,117 @@ export default function ConfigurationPage() {
                         </Card>
                     </TabsContent>
 
+                    {/* DEPARTAMENTOS TAB */}
+                    <TabsContent value="departamentos">
+                        <Card className="border-border shadow-sm animate-in fade-in zoom-in-95 duration-500">
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                <div className="space-y-1">
+                                    <CardTitle>Departamentos</CardTitle>
+                                    <CardDescription>
+                                        Departamentos para asignar a empleados.
+                                    </CardDescription>
+                                </div>
+                                <Button 
+                                    size="sm" 
+                                    className="gap-2"
+                                    onClick={() => setIsAddingDepartamento(true)}
+                                    disabled={isAddingDepartamento}
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    Agregar Departamento
+                                </Button>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="rounded-md border border-border overflow-hidden">
+                                    <Table>
+                                        <TableHeader className="bg-muted/50">
+                                            <TableRow>
+                                                <TableHead>ID</TableHead>
+                                                <TableHead>Nombre</TableHead>
+                                                <TableHead className="text-right">Acciones</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {isAddingDepartamento && (
+                                                <TableRow className="bg-primary/5">
+                                                    <TableCell>—</TableCell>
+                                                    <TableCell>
+                                                        <Input 
+                                                            placeholder="NOMBRE DEL DEPARTAMENTO" 
+                                                            className="h-8 uppercase" 
+                                                            value={newDepartamento.nombre} 
+                                                            onChange={e => setNewDepartamento({...newDepartamento, nombre: e.target.value.toUpperCase()})} 
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={handleSaveDepartamento}>
+                                                                <Save className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => setIsAddingDepartamento(false)}>
+                                                                <X className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                            {loading ? (
+                                                <TableRow><TableCell colSpan={3} className="text-center">Cargando departamentos...</TableCell></TableRow>
+                                            ) : departamentos.length === 0 ? (
+                                                <TableRow><TableCell colSpan={3} className="text-center">No hay departamentos registrados.</TableCell></TableRow>
+                                            ) : departamentos.map((d) => (
+                                                <TableRow key={d.id} className="hover:bg-muted/30 transition-colors">
+                                                    {editingDepartamentoId === d.id ? (
+                                                        <>
+                                                            <TableCell className="font-mono">{d.id}</TableCell>
+                                                            <TableCell>
+                                                                <Input 
+                                                                    className="h-8 uppercase" 
+                                                                    value={editDepartamento.nombre} 
+                                                                    onChange={e => setEditDepartamento({...editDepartamento, nombre: e.target.value.toUpperCase()})} 
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex justify-end gap-2">
+                                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => handleUpdateDepartamento(d.id)}>
+                                                                        <Save className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => setEditingDepartamentoId(null)}>
+                                                                        <X className="h-4 w-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            </TableCell>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <TableCell className="font-mono">{d.id}</TableCell>
+                                                            <TableCell className="font-semibold uppercase tracking-wider">{d.nombre}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end">
+                                                                        <DropdownMenuItem onClick={() => { setEditingDepartamentoId(d.id); setEditDepartamento({...d}); }}>
+                                                                            <Edit className="h-4 w-4 mr-2" /> Editar
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteDepartamento(d.id)}>
+                                                                            <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                                                                        </DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </TableCell>
+                                                        </>
+                                                    )}
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
                     {/* EMPLEADOS TAB */}
                     <TabsContent value="empleados">
                         <Card className="border-slate-200 shadow-sm animate-in fade-in zoom-in-95 duration-500">
@@ -1300,7 +1485,45 @@ export default function ConfigurationPage() {
                                                     <TableCell><Input placeholder="Ficha" className="h-8" value={newEmpleado.ficha} onChange={e => setNewEmpleado({...newEmpleado, ficha: e.target.value})} /></TableCell>
                                                     <TableCell><Input placeholder="NOMBRE" className="h-8 uppercase" value={newEmpleado.nombre} onChange={e => setNewEmpleado({...newEmpleado, nombre: e.target.value.toUpperCase()})} /></TableCell>
                                                     <TableCell><Input placeholder="CARGO" className="h-8 uppercase" value={newEmpleado.cargo} onChange={e => setNewEmpleado({...newEmpleado, cargo: e.target.value.toUpperCase()})} /></TableCell>
-                                                    <TableCell><Input placeholder="DEPARTAMENTO" className="h-8 uppercase" value={newEmpleado.departamento} onChange={e => setNewEmpleado({...newEmpleado, departamento: e.target.value.toUpperCase()})} /></TableCell>
+                                                    <TableCell>
+                                                        {showQuickDepto ? (
+                                                            <div className="flex gap-1 items-center">
+                                                                <Input
+                                                                    placeholder="NUEVO DEPTO"
+                                                                    className="h-8 text-xs uppercase flex-1"
+                                                                    value={quickDeptoName}
+                                                                    onChange={e => setQuickDeptoName(e.target.value.toUpperCase())}
+                                                                    onKeyDown={e => { if (e.key === "Enter") handleQuickAddDepto("new") }}
+                                                                />
+                                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 shrink-0" onClick={() => handleQuickAddDepto("new")}>
+                                                                    <Save className="h-4 w-4" />
+                                                                </Button>
+                                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 shrink-0" onClick={() => { setShowQuickDepto(false); setQuickDeptoName("") }}>
+                                                                    <X className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex gap-1 items-center">
+                                                                <div className="flex-1">
+                                                                    <Select value={newEmpleado.departamentoId} onValueChange={(val) => setNewEmpleado({...newEmpleado, departamentoId: val})}>
+                                                                        <SelectTrigger className="h-8 text-xs">
+                                                                            <SelectValue placeholder="Departamento..." />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {departamentos.map((dep) => (
+                                                                                <SelectItem key={dep.id} value={dep.id.toString()}>
+                                                                                    {dep.nombre}
+                                                                                </SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+                                                                <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" title="Agregar nuevo departamento" onClick={() => setShowQuickDepto(true)}>
+                                                                    <Plus className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex justify-end gap-2">
                                                             <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={handleSaveEmpleado}>
@@ -1324,7 +1547,45 @@ export default function ConfigurationPage() {
                                                             <TableCell><Input className="h-8" value={editEmpleado.ficha} onChange={e => setEditEmpleado({...editEmpleado, ficha: e.target.value})} /></TableCell>
                                                             <TableCell><Input className="h-8 uppercase" value={editEmpleado.nombre} onChange={e => setEditEmpleado({...editEmpleado, nombre: e.target.value.toUpperCase()})} /></TableCell>
                                                             <TableCell><Input className="h-8 uppercase" value={editEmpleado.cargo} onChange={e => setEditEmpleado({...editEmpleado, cargo: e.target.value.toUpperCase()})} /></TableCell>
-                                                            <TableCell><Input className="h-8 uppercase" value={editEmpleado.departamento} onChange={e => setEditEmpleado({...editEmpleado, departamento: e.target.value.toUpperCase()})} /></TableCell>
+                                                            <TableCell>
+                                                                {showQuickDepto ? (
+                                                                    <div className="flex gap-1 items-center">
+                                                                        <Input
+                                                                            placeholder="NUEVO DEPTO"
+                                                                            className="h-8 text-xs uppercase flex-1"
+                                                                            value={quickDeptoName}
+                                                                            onChange={e => setQuickDeptoName(e.target.value.toUpperCase())}
+                                                                            onKeyDown={e => { if (e.key === "Enter") handleQuickAddDepto("edit") }}
+                                                                        />
+                                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 shrink-0" onClick={() => handleQuickAddDepto("edit")}>
+                                                                            <Save className="h-4 w-4" />
+                                                                        </Button>
+                                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 shrink-0" onClick={() => { setShowQuickDepto(false); setQuickDeptoName("") }}>
+                                                                            <X className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex gap-1 items-center">
+                                                                        <div className="flex-1">
+                                                                            <Select value={editEmpleado.departamentoId?.toString() || ""} onValueChange={(val) => setEditEmpleado({...editEmpleado, departamentoId: val})}>
+                                                                                <SelectTrigger className="h-8 text-xs">
+                                                                                    <SelectValue placeholder="Departamento..." />
+                                                                                </SelectTrigger>
+                                                                                <SelectContent>
+                                                                                    {departamentos.map((dep) => (
+                                                                                        <SelectItem key={dep.id} value={dep.id.toString()}>
+                                                                                            {dep.nombre}
+                                                                                        </SelectItem>
+                                                                                    ))}
+                                                                                </SelectContent>
+                                                                            </Select>
+                                                                        </div>
+                                                                        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" title="Agregar nuevo departamento" onClick={() => setShowQuickDepto(true)}>
+                                                                            <Plus className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </div>
+                                                                )}
+                                                            </TableCell>
                                                             <TableCell colSpan={2} className="text-right">
                                                                 <div className="flex justify-end gap-2">
                                                                     <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => handleUpdateEmpleado(e.id)}><Save className="h-4 w-4" /></Button>
@@ -1337,7 +1598,7 @@ export default function ConfigurationPage() {
                                                             <TableCell className="font-mono">{e.ficha}</TableCell>
                                                             <TableCell className="font-medium">{e.nombre}</TableCell>
                                                             <TableCell>{e.cargo}</TableCell>
-                                                            <TableCell>{e.departamento}</TableCell>
+                                                            <TableCell>{e.departamento?.nombre || e.departamento || ""}</TableCell>
                                                             <TableCell>
                                                                 <Select 
                                                                     value={e.rol || "Ninguno"} 

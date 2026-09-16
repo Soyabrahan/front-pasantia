@@ -7,14 +7,13 @@ interface PaseRecord {
     concepto?: string;
     tipo_pago?: string;
     numero_compra?: string;
-    solicitador?: { nombre: string; ficha: string; departamento?: string; cargo?: string };
+    solicitador?: { nombre: string; ficha: string; departamento?: string | { nombre?: string }; cargo?: string };
     conductor?: { nombre: string; ficha: string };
-    vehiculo?: { placa: string; modelo: string; fmo?: string };
+    vehiculo_snapshot?: string;
     destino?: { nombre: string; direccion: string; telefono?: string };
     observaciones?: string;
     tiempo_estimado?: string;
-    solicitud?: string;
-    despachador?: { nombre: string; ficha: string; departamento?: string; cargo?: string };
+    despachador?: { nombre: string; ficha: string; departamento?: string | { nombre?: string }; cargo?: string };
     autorizador?: { nombre: string; ficha: string; cargo?: string };
     equiposPases?: any[];
 }
@@ -55,13 +54,11 @@ export function generateExcel(data: PaseRecord[]) {
             "Concepto": pase.concepto || "N/A",
             "Solicitante (Nombre)": pase.solicitador?.nombre || "N/A",
             "Solicitante (Ficha)": pase.solicitador?.ficha || "N/A",
-            "Solicitante (Departamento)": pase.solicitador?.departamento || "N/A",
+            "Solicitante (Departamento)": (typeof pase.solicitador?.departamento === "object" ? pase.solicitador?.departamento?.nombre : pase.solicitador?.departamento) || "N/A",
             "Solicitante (Cargo)": pase.solicitador?.cargo || "N/A",
             "Conductor (Nombre)": pase.conductor?.nombre || "N/A",
             "Conductor (Ficha)": pase.conductor?.ficha || "N/A",
-            "Vehículo (Placa)": pase.vehiculo?.placa || "N/A",
-            "Vehículo (Modelo)": pase.vehiculo?.modelo || "N/A",
-            "Vehículo (FMO)": pase.vehiculo?.fmo || "N/A",
+            "Vehículo": pase.vehiculo_snapshot || "N/A",
             "Destino (Nombre)": pase.destino?.nombre || "N/A",
             "Destino (Dirección)": pase.destino?.direccion || "N/A",
             "Destino (Teléfono)": pase.destino?.telefono || "N/A",
@@ -72,7 +69,7 @@ export function generateExcel(data: PaseRecord[]) {
             "Autorizado Por": pase.autorizador?.nombre || "N/A",
             "Ficha Autorizador": pase.autorizador?.ficha || "N/A",
             "Tiempo Estimado": pase.tiempo_estimado || "N/A",
-            "N° Solicitud": pase.solicitud || "N/A",
+            "N° Solicitud": pase.concepto || "N/A",
             "Equipos / Materiales": equipStr || "Ninguno",
             "Observaciones (Dirigido A)": pase.observaciones || ""
         };

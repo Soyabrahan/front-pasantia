@@ -72,6 +72,7 @@ export function PasesPieChart({ data, label }: PasesPieChartProps) {
             ))}
           </Pie>
           <ChartTooltip
+            cursor={false}
             content={
               <ChartTooltipContent
                 formatter={(value: unknown) => {

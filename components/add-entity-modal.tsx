@@ -12,8 +12,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { api } from "@/lib/api-client";
-import { Loader2, UserPlus, MapPinPlus, Save } from "lucide-react";
+import { Loader2, UserPlus, MapPinPlus, Save, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AddEntityModalProps {
@@ -35,11 +42,12 @@ export function AddEntityModal({
 }: AddEntityModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [departamentos, setDepartamentos] = useState<any[]>([]);
 
   const [empleadoData, setEmpleadoData] = useState({
     ficha: "",
     nombre: "",
-    departamento: "",
+    departamentoId: "",
     cargo: "",
   });
 
@@ -61,14 +69,21 @@ export function AddEntityModal({
   useEffect(() => {
     if (isOpen) {
       setError(null);
-      setEmpleadoData({ ficha: "", nombre: "", departamento: "", cargo: role === "Conductor" ? "CONDUCTOR" : "" });
+      setEmpleadoData({ ficha: "", nombre: "", departamentoId: "", cargo: role === "Conductor" ? "CONDUCTOR" : "" });
       setDestinoData({ nombre: "", direccion: "", telefono: "" });
       setVehiculoData({ placa: "", marca: "", modelo: "", esFMO: false, fmo: "", conductorId: "" });
+      if (type === "empleado") {
+        api.get<any[]>("/departamentos").then(setDepartamentos).catch(() => setDepartamentos([]));
+      }
     }
   }, [isOpen]);
 
   const [showVehicleFields, setShowVehicleFields] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
+
+  // Quick-add department
+  const [showQuickDepto, setShowQuickDepto] = useState(false);
+  const [quickDeptoName, setQuickDeptoName] = useState("");
 
   const handleEmpleadoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -97,6 +112,19 @@ export function AddEntityModal({
     }
   };
 
+  const handleQuickAddDepto = async () => {
+    if (!quickDeptoName.trim()) return;
+    try {
+      const saved = await api.post<any>("/departamentos", { nombre: quickDeptoName.toUpperCase() });
+      setDepartamentos([...departamentos, saved]);
+      setEmpleadoData({ ...empleadoData, departamentoId: saved.id.toString() });
+      setQuickDeptoName("");
+      setShowQuickDepto(false);
+    } catch (err) {
+      setError("Error al crear departamento");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -105,10 +133,15 @@ export function AddEntityModal({
     try {
       let result: any;
       if (type === "empleado") {
-        if (!empleadoData.ficha || !empleadoData.nombre || !empleadoData.departamento || (role !== "Conductor" && !empleadoData.cargo)) {
+        if (!empleadoData.ficha || !empleadoData.nombre || !empleadoData.departamentoId || (role !== "Conductor" && !empleadoData.cargo)) {
           throw new Error("Todos los campos del empleado son obligatorios");
         }
-        result = await api.post<{ id: string | number }>("/empleados", { ...empleadoData, rol: role });
+        const payload = {
+          ...empleadoData,
+          departamentoId: parseInt(empleadoData.departamentoId),
+          rol: role,
+        };
+        result = await api.post<{ id: string | number }>("/empleados", payload);
         
         // Si es conductor y se seleccionó/creó vehículo, asignar
         if (role === "Conductor") {
@@ -208,18 +241,48 @@ export function AddEntityModal({
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="departamento" className={cn(labelClass, "text-[10px]")}>
+                  <Label htmlFor="departamentoId" className={labelClass}>
                     Depto. <span className="text-destructive">*</span>
                   </Label>
-                  <Input
-                    id="departamento"
-                    name="departamento"
-                    placeholder="EJ. TELEMATICA"
-                    value={empleadoData.departamento}
-                    onChange={handleEmpleadoChange}
-                    className={cn("col-span-3 uppercase", inputClass)}
-                    required
-                  />
+                  <div className="col-span-3">
+                    {showQuickDepto ? (
+                      <div className="flex gap-1 items-center">
+                        <Input
+                          placeholder="NUEVO DEPTO"
+                          className={cn("flex-1 uppercase", inputClass)}
+                          value={quickDeptoName}
+                          onChange={e => setQuickDeptoName(e.target.value.toUpperCase())}
+                          onKeyDown={e => { if (e.key === "Enter") handleQuickAddDepto() }}
+                        />
+                        <Button type="button" size="icon" variant="ghost" className="h-10 w-10 text-green-600 shrink-0" onClick={handleQuickAddDepto}>
+                          <Save className="h-4 w-4" />
+                        </Button>
+                        <Button type="button" size="icon" variant="ghost" className="h-10 w-10 text-red-600 shrink-0" onClick={() => { setShowQuickDepto(false); setQuickDeptoName("") }}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-1 items-center">
+                        <div className="flex-1">
+                          <Select value={empleadoData.departamentoId} onValueChange={(val) => setEmpleadoData({...empleadoData, departamentoId: val})}>
+                            <SelectTrigger className={cn("h-10 text-xs", inputClass)}>
+                              <SelectValue placeholder="Seleccionar..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {departamentos.map((dep) => (
+                                <SelectItem key={dep.id} value={dep.id.toString()}>
+                                  {dep.nombre}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button type="button" size="icon" variant="ghost" className="h-10 w-10 shrink-0" title="Agregar nuevo departamento" onClick={() => setShowQuickDepto(true)}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {role !== "Conductor" && (
                   <div className="grid grid-cols-4 items-center gap-4">
