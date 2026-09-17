@@ -17,8 +17,12 @@ export function generateControlExcel(
     rangeTo: number
 ) {
     const paseMap = new Map<string, PaseRecord>();
+    let padLen = 3;
     for (const p of pases) {
         paseMap.set(p.numeroPase, p);
+        if (p.numeroPase && p.numeroPase.length > padLen) {
+            padLen = p.numeroPase.length;
+        }
     }
 
     const rows: Record<string, string | number>[] = [];
@@ -26,8 +30,8 @@ export function generateControlExcel(
 
     for (let n = rangeFrom; n <= rangeTo; n++) {
         seq++;
-        const numStr = String(n);
-        const pase = paseMap.get(numStr);
+        const numStr = String(n).padStart(padLen, '0');
+        const pase = paseMap.get(numStr) || paseMap.get(String(n));
 
         let fechaFormatted = "";
         if (pase?.fecha_emision) {
