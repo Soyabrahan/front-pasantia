@@ -4,6 +4,19 @@ import React, { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function getApiBaseUrl() {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (envUrl) {
+    return envUrl;
+  }
+
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:3001`;
+  }
+
+  return "http://127.0.0.1:3001";
+}
+
 export function ServerStatus({
   className,
   hideText = false,
@@ -14,42 +27,32 @@ export function ServerStatus({
   const [status, setStatus] = useState<
     "connected" | "disconnected" | "checking"
   >("checking");
+  const [lastChecked, setLastChecked] = useState<Date | null>(null);
+
   const checkConnection = async () => {
     setStatus("checking");
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-      const isDev = process.env.NODE_ENV === "development";
-      const baseUrl = isDev
-        ? "/api"
-        : (process.env.NEXT_PUBLIC_API_URL || "http://10.200.30.143:3001");
-
-      await fetch(
-        `${baseUrl}/`,
-        {
+      // Usamos fetch directamente para evitar el parseo de JSON
+      // El modo no-cors permite detectar si hay respuesta aunque no se pueda leer
+      await fetch(`${getApiBaseUrl()}/`, {
           method: "GET",
+          mode: "no-cors",
           cache: "no-cache",
-          signal: controller.signal,
+          signal: AbortSignal.timeout(3000),
         },
       );
-      clearTimeout(timeoutId);
       setStatus("connected");
     } catch (error) {
-      // Timeout o error de red → servidor no responde
-      if ((error as Error)?.name === "AbortError") {
-        setStatus("disconnected");
-      } else {
-        // Error CORS o similar → la request llegó al servidor
-        setStatus("connected");
-      }
+      console.error("Server connection check failed:", error);
+      setStatus("disconnected");
     } finally {
+      setLastChecked(new Date());
     }
   };
 
   useEffect(() => {
     checkConnection();
-    const interval = setInterval(checkConnection, 60000);
+    const interval = setInterval(checkConnection, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -108,6 +111,16 @@ export function ServerStatus({
           </>
         )}
       </div>
+      {lastChecked && status !== "checking" && !hideText && (
+        <span className="text-[10px] text-white/40">
+          Última vez:{" "}
+          {lastChecked.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+        </span>
+      )}
     </div>
   );
 }

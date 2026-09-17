@@ -1,11 +1,18 @@
-import { redirectToLogin } from "./auth-utils";
+function getApiBaseUrl() {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (envUrl) {
+    return envUrl;
+  }
 
-// En desarrollo, usamos el proxy de Next.js (/api) para evitar problemas de CORS.
-// En producción (export estático), usamos la IP directa del backend.
-const isDev = process.env.NODE_ENV === "development";
-const API_BASE_URL = isDev
-  ? "/api"
-  : process.env.NEXT_PUBLIC_API_URL || "http://10.200.30.143:3001";
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:3001`;
+  }
+
+  return "http://127.0.0.1:3001";
+}
+
+// Usamos la URL del backend desde el entorno o, si no existe, la derivamos desde el host actual.
+const API_BASE_URL = getApiBaseUrl();
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
@@ -45,17 +52,11 @@ export async function apiRequest<T>(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  let response: Response;
-  try {
-    response = await fetch(url.toString(), {
-      cache: "no-store",
-      ...options,
-      headers,
-    });
-  } catch (error) {
-    console.error(`[Network Error] ${endpoint} - No se pudo conectar al servidor`, error);
-    throw new Error("No se pudo conectar con el servidor. Verifique su conexión.");
-  }
+  const response = await fetch(url.toString(), {
+    cache: "no-store",
+    ...options,
+    headers,
+  });
 
   if (!response.ok) {
     let errorData: any = {};

@@ -403,7 +403,7 @@ function MaterialPassForm() {
 
   useEffect(() => {
     if (!editId && mounted) {
-      const { fecha, hora, ...rest } = formData;
+      const { fecha, hora, folio, ...rest } = formData;
       sessionStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(rest));
     }
   }, [formData, editId, mounted]);
@@ -419,7 +419,6 @@ function MaterialPassForm() {
     const requiredFields = [
       { field: 'folio', name: 'N° Pase' },
       { field: 'conceptoOpcion', name: 'Tipo de Movimiento' },
-      { field: 'tiempoEstimado', name: 'Tiempo Estimado' },
       { field: 'embargueseA', name: 'Embárguese a' },
       { field: 'direccion', name: 'Dirección' },
       { field: 'telefono', name: 'Teléfono' },
